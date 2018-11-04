@@ -44,11 +44,13 @@ namespace OpenGovAlerts.OpenGov
 
                     string name = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingName']/span").InnerText);
                     string date = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText);
+                    string topic = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='serachMeetingResult']/p").InnerText);
 
                     newMeetings.Add(new Meeting
                     {
                         ClientId = clientId,
                         Name = name,
+                        Topic = topic,
                         Url = meetingUri,
                         Date = DateTime.ParseExact(date, "dd.MM.yyyy", CultureInfo.CurrentCulture)
                     });

@@ -67,7 +67,7 @@ namespace OpenGovAlerts
                 HtmlDocument doc = new HtmlDocument();
                 doc.LoadHtml(html);
 
-                List<Tuple<Uri, string, DateTime>> newMeetings = new List<Tuple<Uri, string, DateTime>>();
+                List<Tuple<Uri, string, DateTime, string>> newMeetings = new List<Tuple<Uri, string, DateTime, string>>();
 
                 var meetings = doc.DocumentNode.SelectNodes("//div[@class='meetingList searchResultsList']/ul/li/a");
 
@@ -85,8 +85,9 @@ namespace OpenGovAlerts
 
                             string name = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingName']/span").InnerText);
                             string date = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText);
+                            string topic = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='serachMeetingResult']/p").InnerText);
 
-                            newMeetings.Add(new Tuple<Uri, string, DateTime>(meetingUri, name, DateTime.ParseExact(date, "dd.MM.yyyy", CultureInfo.CurrentCulture)));
+                            newMeetings.Add(new Tuple<Uri, string, DateTime, string>(meetingUri, name, DateTime.ParseExact(date, "dd.MM.yyyy", CultureInfo.CurrentCulture), topic));
                         }
                     }
                 }
@@ -101,7 +102,7 @@ namespace OpenGovAlerts
 
                     foreach (var meeting in newMeetings.OrderByDescending(m => m.Item3))
                     {
-                        body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td></tr>\r\n", meeting.Item2, meeting.Item1, meeting.Item3.ToString("dd.MM.yyyy"));
+                        body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.Item2, meeting.Item1, meeting.Item3.ToString("dd.MM.yyyy"), meeting.Item4);
                     }
 
                     body.Append("</table>");
