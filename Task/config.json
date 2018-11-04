@@ -1,0 +1,88 @@
+{
+  "clients": [
+    {
+      "id": "stavanger",
+      "openGovId": "STAVANGER",
+      "name": "Stavanger kommune"
+    },
+    {
+      "id": "sandnes",
+      "openGovId": "sandnes",
+      "name": "Sandnes kommune"
+    }
+  ],
+  "searches": [
+    {
+      "clientId": "stavanger",
+      "phrase": "2551",
+      "name": "Plan 2551 E-39 Smiene-Harestad",
+      "issueUrl": "https://trello.com/c/7qOHJpDU/57-plan-2551-e-39-smiene-harestad"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2683",
+      "name": "Plan 2683 - detaljregulering for fv. 414 Misjonsveien, tilrettelegging for sykkel",
+      "issueUrl": "https://trello.com/c/qtt2E1M3/73-plan-2683-detaljregulering-for-fv-414-misjonsveien-tilrettelegging-for-sykkel"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2684",
+      "name": "Plan 2684 - detaljregulering for fv. 446 Randabergveien, tilrettegging for sykkel",
+      "issueUrl": "https://trello.com/c/l1nQehzU/74-plan-2684-detaljregulering-for-fv-446-randabergveien-tilrettegging-for-sykkel"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2655",
+      "name": "Plan 2655 - Detaljregulering for et område ved Paradis stasjon",
+      "issueUrl": "https://trello.com/c/7hDbgNxX/76-plan-2655-detaljregulering-for-et-omr%C3%A5de-ved-paradis-stasjon"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2682",
+      "name": "Plan 2682 Christian Bjellands gate - tilrettelegging for sykkeltrase",
+      "issueUrl": "https://trello.com/c/lPqWMyEe/69-plan-2682-christian-bjellands-gate-tilrettelegging-for-sykkeltrase"
+    },
+    {
+      "clientId": "sandnes",
+      "phrase": "2016102",
+      "name": "Plan 2016102 - Detaljregulering av bussvei fra Kvadrat til Sandnes sentrum",
+      "issueUrl": "https://trello.com/c/METQ4ku9/2-plan-2016102-detaljregulering-av-bussvei-fra-kvadrat-til-sandnes-sentrum"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2619",
+      "name": "Plan 2619, Åsen næringsområde",
+      "issueUrl": "https://trello.com/c/w8bN0iiy/70-plan-2619-%C3%A5sen-n%C3%A6ringsomr%C3%A5de"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2673",
+      "name": "Plan 2673 - Detaljregulering for gang- og sykkelvei og fortau fv. 441 - Austre Åmøy - Tasta bydel",
+      "issueUrl": "https://trello.com/c/OzjLJlfy/60-plan-2673-detaljregulering-for-gang-og-sykkelvei-og-fortau-fv-441-austre-%C3%A5m%C3%B8y-tasta-bydel"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2517",
+      "name": "Plan 2517 - Reguleringsplan for krysset mellom Madlaveien og Regimentveien - Madla Bydel",
+      "issueUrl": "https://trello.com/c/OcOHfqbg/40-plan-2517-reguleringsplan-for-krysset-mellom-madlaveien-og-regimentveien-madla-bydel"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2589",
+      "name": "Plan 2589 Gang-/sykkelvei Dusavikveien",
+      "issueUrl": "https://trello.com/c/XUiz9Mr0/31-plan-2589-gang-sykkelvei-dusavikveien"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2535",
+      "name": "Plan 2535 Transportkorridor Vest Kvernevik - Tasta",
+      "issueUrl": "https://trello.com/c/Y3jpSq3r/26-plan-2535-transportkorridor-vest-kvernevik-tasta"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2505",
+      "name": "Plan 2505 - Begrenset høring Hjalmar Johansens gt.",
+      "issueUrl": "https://trello.com/c/SNAZwOqj/24-plan-2505-begrenset-h%C3%B8ring-hjalmar-johansens-gt"
+    }
+  ]
+}
