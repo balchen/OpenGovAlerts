@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <None Update="config.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
