@@ -82,7 +82,7 @@ namespace OpenGovAlerts
                 {
                     seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
 
-                    MailMessage email = new MailMessage("nord-jaren@syklistene.no", "nord-jaren@syklistene.no");
+                    MailMessage email = new MailMessage(config.Smtp.Sender, config.Smtp.Sender);
                     email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
 
                     StringBuilder body = new StringBuilder();
@@ -100,9 +100,9 @@ namespace OpenGovAlerts
                     email.BodyEncoding = Encoding.UTF8;
                     email.BodyTransferEncoding = TransferEncoding.Base64;
 
-                    SmtpClient smtp = new SmtpClient("mail.syklistene.no", 587);
+                    SmtpClient smtp = new SmtpClient(config.Smtp.Server, config.Smtp.Port);
                     smtp.UseDefaultCredentials = false;
-                    smtp.Credentials = new NetworkCredential("nord-jaren@syklistene.no", "Hverdagssykling123");
+                    smtp.Credentials = new NetworkCredential(config.Smtp.Sender, config.Smtp.Password);
                     smtp.EnableSsl = true;
 
                     NEVER_EAT_POISON_Disable_CertificateValidation();
