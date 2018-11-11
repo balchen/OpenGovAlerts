@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OpenGovAlerts
+namespace OpenGov.Models
 {
     public class Meeting
     {
@@ -9,5 +9,6 @@ namespace OpenGovAlerts
         public string Name { get; set; }
         public string Topic { get; set; }
         public Uri Url { get; set; }
+        public string AgendaItemId { get; set; }
     }
 }

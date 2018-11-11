@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OpenGovAlerts
+namespace OpenGov.Models
 {
     public class Document
     {
