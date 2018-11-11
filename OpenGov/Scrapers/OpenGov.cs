@@ -14,6 +14,7 @@ namespace OpenGov.Scrapers
     public class OpenGov: IScraper
     {
         private string clientId;
+        static readonly char[] invalidFileNameChars = Path.GetInvalidFileNameChars();
 
         public OpenGov(string clientId)
         {
@@ -77,7 +78,8 @@ namespace OpenGov.Scrapers
 
             foreach (var document in documents)
             {
-                using (var output = new FileStream(Path.Combine(path, document.Name + ".pdf"), FileMode.OpenOrCreate, FileAccess.Write))
+                var filename = new string(document.Name.Select(ch => invalidFileNameChars.Contains(ch) ? '_' : ch).ToArray());
+                using (var output = new FileStream(Path.Combine(path, filename + ".pdf"), FileMode.OpenOrCreate, FileAccess.Write))
                 {
                     Stream input = await http.GetStreamAsync(document.Url);
                     await input.CopyToAsync(output);
@@ -104,10 +106,15 @@ namespace OpenGov.Scrapers
             {
                 Document document = new Document();
                 document.Url = new Uri(url, documentLink.Attributes["href"].Value);
-                document.Name = documentLink.SelectSingleNode("descendant::div[@class='fileNameDetail']").InnerText;
-                document.Type = documentLink.SelectSingleNode("descendant::div[@class='fileDocumentCategory']").InnerText;
+                var fileNameNode = documentLink.SelectSingleNode("descendant::div[@class='fileNameDetail']");
 
-                documents.Add(document);
+                if (fileNameNode != null)
+                {
+                    document.Name = fileNameNode.InnerText;
+                    document.Type = documentLink.SelectSingleNode("descendant::div[@class='fileDocumentCategory']").InnerText;
+
+                    documents.Add(document);
+                }
             }
 
             return documents;

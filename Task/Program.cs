@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Mail;
+using System.Net.Mime;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -20,6 +21,8 @@ namespace OpenGovAlerts
 {
     class Program
     {
+        static readonly char[] invalidFileNameChars = Path.GetInvalidFileNameChars();
+
         [Obsolete("Do not use this in Production code!!!", false)]
         static void NEVER_EAT_POISON_Disable_CertificateValidation()
         {
@@ -95,7 +98,7 @@ namespace OpenGovAlerts
                     email.Body = body.ToString();
                     email.IsBodyHtml = true;
                     email.BodyEncoding = Encoding.UTF8;
-                    email.BodyTransferEncoding = System.Net.Mime.TransferEncoding.Base64;
+                    email.BodyTransferEncoding = TransferEncoding.Base64;
 
                     SmtpClient smtp = new SmtpClient("mail.syklistene.no", 587);
                     smtp.UseDefaultCredentials = false;
@@ -106,7 +109,11 @@ namespace OpenGovAlerts
 
                     await smtp.SendMailAsync(email);
 
-                    await File.WriteAllLinesAsync(seenMeetingsPath, seenMeetings);
+                    using (var file = new StreamWriter(new FileStream(seenMeetingsPath, FileMode.Create, FileAccess.Write)))
+                    {
+                        foreach (string meetingUrl in seenMeetings)
+                            await file.WriteLineAsync(meetingUrl);
+                    }
                 }
             }
         }
