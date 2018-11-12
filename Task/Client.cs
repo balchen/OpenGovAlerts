@@ -6,5 +6,6 @@
         public string Name { get; set; }
         public string OpenGovId { get; set; }
         public string JupiterUrl { get; set; }
+        public string SRUUrl { get; set; }
     }
 }

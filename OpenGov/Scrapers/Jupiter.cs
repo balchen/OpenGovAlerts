@@ -77,6 +77,7 @@ namespace OpenGov.Scrapers
                             {
                                 newMeetings.Add(new Meeting
                                 {
+                                    Phrase = phrase,
                                     Date = time,
                                     Name = body,
                                     Topic = agendaItemTitle,
@@ -91,9 +92,9 @@ namespace OpenGov.Scrapers
             return newMeetings;
         }
 
-        public async Task<IEnumerable<Document>> DownloadDocuments(Meeting meeting, string path)
+        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
         {
-            throw new NotImplementedException();
+            return new List<Document>();
         }
     }
 }

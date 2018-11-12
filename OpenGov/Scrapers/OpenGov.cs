@@ -14,7 +14,6 @@ namespace OpenGov.Scrapers
     public class OpenGov: IScraper
     {
         private string clientId;
-        static readonly char[] invalidFileNameChars = Path.GetInvalidFileNameChars();
 
         public OpenGov(string clientId)
         {
@@ -54,6 +53,7 @@ namespace OpenGov.Scrapers
 
                     newMeetings.Add(new Meeting
                     {
+                        Phrase = phrase,
                         ClientId = clientId,
                         Name = name,
                         Topic = topic,
@@ -67,26 +67,9 @@ namespace OpenGov.Scrapers
             return newMeetings;
         }
 
-        public async Task<IEnumerable<Document>> DownloadDocuments(Meeting meeting, string path)
+        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
         {
-            IEnumerable<Document> documents = await GetAgendaItemDocumentUrls(clientId, meeting.AgendaItemId);
-
-            HttpClient http = new HttpClient();
-
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
-
-            foreach (var document in documents)
-            {
-                var filename = new string(document.Name.Select(ch => invalidFileNameChars.Contains(ch) ? '_' : ch).ToArray());
-                using (var output = new FileStream(Path.Combine(path, filename + ".pdf"), FileMode.OpenOrCreate, FileAccess.Write))
-                {
-                    Stream input = await http.GetStreamAsync(document.Url);
-                    await input.CopyToAsync(output);
-                }
-            }
-
-            return documents;
+            return await GetAgendaItemDocumentUrls(clientId, meeting.AgendaItemId);
         }
 
         private async Task<IEnumerable<Document>> GetAgendaItemDocumentUrls(string clientId, string agendaItemId)
