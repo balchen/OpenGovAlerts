@@ -47,76 +47,86 @@ namespace OpenGovAlerts
 
             foreach (Search search in config.Searches)
             {
-                var client = config.Clients.FirstOrDefault(c => c.Id == search.ClientId);
+                var clients = config.Clients.Where(c => search.ClientId == "*" || c.Id == search.ClientId);
 
-                if (client == null)
+                if (!clients.Any())
                 {
                     Console.WriteLine(search.ClientId + " is invalid client for search " + search.Name);
                     continue;
                 }
 
-                List<string> loadedMeetings = new List<string>();
-
-                if (!Directory.Exists(Path.Combine(client.Name, search.Phrase)))
-                    Directory.CreateDirectory(Path.Combine(client.Name, search.Phrase));
-
-                string seenMeetingsPath = Path.Combine(client.Name, search.Phrase, "meetings.txt");
-
-                if (File.Exists(seenMeetingsPath))
+                foreach (var client in clients)
                 {
-                    loadedMeetings = (await File.ReadAllTextAsync(seenMeetingsPath)).Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
-                }
+                    List<string> loadedMeetings = new List<string>();
 
-                HashSet<string> seenMeetings = new HashSet<string>(loadedMeetings);
+                    if (!Directory.Exists(Path.Combine(client.Name, search.Phrase)))
+                        Directory.CreateDirectory(Path.Combine(client.Name, search.Phrase));
 
-                IScraper scraper = null;
+                    string seenMeetingsPath = Path.Combine(client.Name, search.Phrase, "meetings.txt");
 
-                if (!string.IsNullOrEmpty(client.OpenGovId))
-                    scraper = new OpenGov.Scrapers.OpenGov(client.OpenGovId);
-                else if (!string.IsNullOrEmpty(client.JupiterUrl))
-                    scraper = new Jupiter(client.JupiterUrl);
-                else if (!string.IsNullOrEmpty(client.SRUUrl))
-                    scraper = new SRU(new Uri(client.SRUUrl));
+                    if (File.Exists(seenMeetingsPath))
+                    {
+                        loadedMeetings = (await File.ReadAllTextAsync(seenMeetingsPath)).Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
+                    }
+
+                    HashSet<string> seenMeetings = new HashSet<string>(loadedMeetings);
+
+                    IScraper scraper = null;
+
+                    if (!string.IsNullOrEmpty(client.OpenGovId))
+                        scraper = new OpenGov.Scrapers.OpenGov(client.OpenGovId);
+                    else if (!string.IsNullOrEmpty(client.JupiterUrl))
+                        scraper = new Jupiter(client.JupiterUrl);
+                    else if (!string.IsNullOrEmpty(client.SRUUrl))
+                        scraper = new SRU(new Uri(client.SRUUrl));
                 else if (!string.IsNullOrEmpty(client.ACOSUrl))
                     scraper = new ACOS(new Uri(client.ACOSUrl));
 
-                IEnumerable<Meeting> newMeetings = await scraper.FindMeetings(search.Phrase.ToLower(), seenMeetings);
-
-                if (newMeetings.Any())
-                {
-                    seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
-
-                    MailMessage email = new MailMessage(config.Smtp.Sender, config.Smtp.Sender);
-                    email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
-
-                    StringBuilder body = new StringBuilder();
-                    body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0} i {1}:</h3>\r\n\r\n<table>", search.Name, client.Name);
-
-                    foreach (var meeting in newMeetings.OrderByDescending(m => m.Date))
+                    try
                     {
-                        body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.Name, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Topic);
+                        IEnumerable<Meeting> newMeetings = await scraper.FindMeetings(search.Phrase.ToLower(), seenMeetings);
+
+                        if (newMeetings.Any())
+                        {
+                            seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
+
+                            MailMessage email = new MailMessage(config.Smtp.Sender, config.Smtp.Sender);
+                            email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
+
+                            StringBuilder body = new StringBuilder();
+                            body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0} i {1}:</h3>\r\n\r\n<table>", search.Name, client.Name);
+
+                            foreach (var meeting in newMeetings.OrderByDescending(m => m.Date))
+                            {
+                                body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.Name, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Topic);
+                            }
+
+                            body.Append("</table>");
+
+                            email.Body = body.ToString();
+                            email.IsBodyHtml = true;
+                            email.BodyEncoding = Encoding.UTF8;
+                            email.BodyTransferEncoding = TransferEncoding.Base64;
+
+                            SmtpClient smtp = new SmtpClient(config.Smtp.Server, config.Smtp.Port);
+                            smtp.UseDefaultCredentials = false;
+                            smtp.Credentials = new NetworkCredential(config.Smtp.Sender, config.Smtp.Password);
+                            smtp.EnableSsl = true;
+
+                            NEVER_EAT_POISON_Disable_CertificateValidation();
+
+                            await smtp.SendMailAsync(email);
+
+                            using (var file = new StreamWriter(new FileStream(seenMeetingsPath, FileMode.Create, FileAccess.Write)))
+                            {
+                                foreach (string meetingUrl in seenMeetings)
+                                    await file.WriteLineAsync(meetingUrl);
+                            }
+                        }
                     }
-
-                    body.Append("</table>");
-
-                    email.Body = body.ToString();
-                    email.IsBodyHtml = true;
-                    email.BodyEncoding = Encoding.UTF8;
-                    email.BodyTransferEncoding = TransferEncoding.Base64;
-
-                    SmtpClient smtp = new SmtpClient(config.Smtp.Server, config.Smtp.Port);
-                    smtp.UseDefaultCredentials = false;
-                    smtp.Credentials = new NetworkCredential(config.Smtp.Sender, config.Smtp.Password);
-                    smtp.EnableSsl = true;
-
-                    NEVER_EAT_POISON_Disable_CertificateValidation();
-
-                    await smtp.SendMailAsync(email);
-
-                    using (var file = new StreamWriter(new FileStream(seenMeetingsPath, FileMode.Create, FileAccess.Write)))
+                    catch (Exception ex)
                     {
-                        foreach (string meetingUrl in seenMeetings)
-                            await file.WriteLineAsync(meetingUrl);
+
                     }
                 }
             }
