@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace OpenGov.Models
 {
@@ -13,5 +14,7 @@ namespace OpenGov.Models
         public string Name { get; set; }
         public string Topic { get; set; }
         public Uri Url { get; set; }
+
+        public IList<Document> Documents { get; set; }
     }
 }

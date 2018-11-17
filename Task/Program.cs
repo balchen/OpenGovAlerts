@@ -77,6 +77,8 @@ namespace OpenGovAlerts
                     scraper = new Jupiter(client.JupiterUrl);
                 else if (!string.IsNullOrEmpty(client.SRUUrl))
                     scraper = new SRU(new Uri(client.SRUUrl));
+                else if (!string.IsNullOrEmpty(client.ACOSUrl))
+                    scraper = new ACOS(new Uri(client.ACOSUrl));
 
                 IEnumerable<Meeting> newMeetings = await scraper.FindMeetings(search.Phrase.ToLower(), seenMeetings);
 
