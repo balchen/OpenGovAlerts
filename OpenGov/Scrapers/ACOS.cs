@@ -102,10 +102,9 @@ namespace OpenGov.Scrapers
                         {
                             AgendaItemId = agendaItemId,
                             BoardId = boardId,
-                            Name = boardName,
+                            BoardName = boardName,
                             Date = date,
-                            Phrase = phrase,
-                            Topic = title.RemoveWhitespace(),
+                            Title = title.RemoveWhitespace(),
                             MeetingId = meetingId,
                             Url = meetingUrl
                         };

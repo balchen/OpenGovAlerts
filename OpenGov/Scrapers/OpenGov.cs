@@ -53,10 +53,8 @@ namespace OpenGov.Scrapers
 
                     newMeetings.Add(new Meeting
                     {
-                        Phrase = phrase,
-                        ClientId = clientId,
-                        Name = name,
-                        Topic = topic,
+                        BoardName = name,
+                        Title = topic,
                         Url = meetingUri,
                         Date = date,
                         AgendaItemId = agendaItemId

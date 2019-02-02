@@ -11,7 +11,7 @@ namespace OpenGov.Storage
         private string accessToken;
         private string baseFolder;
 
-        public async Task AddDocument(Meeting meeting, Document document)
+        public async Task<string> AddDocument(Meeting meeting, Document document)
         {
             DropboxCertHelper.InitializeCertPinning();
 
@@ -48,6 +48,8 @@ namespace OpenGov.Storage
                     Console.WriteLine("    Request uri: {0}", e.RequestUri);
                 }
             }
+
+            return "";
         }
     }
 }

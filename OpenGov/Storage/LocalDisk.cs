@@ -16,11 +16,11 @@ namespace OpenGov.Storage
             this.basePath = basePath;
         }
 
-        public async Task AddDocument(Meeting meeting, Document document)
+        public async Task<string> AddDocument(Meeting meeting, Document document)
         {
             HttpClient http = new HttpClient();
 
-            string path = Path.Combine(basePath, meeting.ClientId, meeting.Phrase, meeting.Name, meeting.Date.ToString("yyyy-MM-dd"));
+            string path = Path.Combine(basePath, meeting.Source.Name, meeting.BoardName, meeting.Date.ToString("yyyy-MM-dd"));
 
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
@@ -31,6 +31,8 @@ namespace OpenGov.Storage
                 Stream input = await http.GetStreamAsync(document.Url);
                 await input.CopyToAsync(output);
             }
+
+            return path;
         }
     }
 }

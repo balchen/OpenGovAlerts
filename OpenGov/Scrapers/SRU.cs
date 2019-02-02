@@ -76,10 +76,9 @@ namespace OpenGov.Scrapers
                             meeting.MeetingId = boardMeeting.Id;
                             meeting.AgendaItemId = item.Id;
 
-                            meeting.Phrase = phrase;
                             meeting.Date = boardMeeting.Start;
-                            meeting.Name = board.Name;
-                            meeting.Topic = item.Tittel;
+                            meeting.BoardName = board.Name;
+                            meeting.Title = item.Tittel;
                             meeting.Url = new Uri(meetingUrl);
 
                             meetings.Add(meeting);

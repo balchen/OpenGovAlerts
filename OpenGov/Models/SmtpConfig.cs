@@ -6,5 +6,6 @@
         public string Password { get; set; }
         public string Server { get; set; }
         public int Port { get; set; }
+        public bool UseSsl { get; internal set; }
     }
 }

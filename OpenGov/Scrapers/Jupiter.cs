@@ -10,18 +10,18 @@ namespace OpenGov.Scrapers
 {
     public class Jupiter: IScraper
     {
-        private string juppiterUrl;
+        private string jupiterUrl;
 
-        public Jupiter(string juppiterUrl)
+        public Jupiter(string jupiterUrl)
         {
-            this.juppiterUrl = juppiterUrl;
+            this.jupiterUrl = jupiterUrl;
         }
 
         public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
         {
             HttpClient http = new HttpClient();
 
-            Uri url = new Uri(juppiterUrl);
+            Uri url = new Uri(jupiterUrl);
 
             string html = await http.GetStringAsync(url);
 
@@ -77,10 +77,9 @@ namespace OpenGov.Scrapers
                             {
                                 newMeetings.Add(new Meeting
                                 {
-                                    Phrase = phrase,
                                     Date = time,
-                                    Name = body,
-                                    Topic = agendaItemTitle,
+                                    BoardName = body,
+                                    Title = agendaItemTitle,
                                     Url = meetingUri
                                 });
                             }

@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using OpenGovAlerts.Models;
+using OpenGovAlerts.Services;
 
 namespace OpenGovAlerts
 {
@@ -24,8 +26,12 @@ namespace OpenGovAlerts
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
             services.AddEntityFrameworkSqlServer();
+            services.AddDbContext<AlertsDbContext>(options =>
+                options.UseSqlServer(Configuration["ConnectionString"]));
 
-            services.AddHangfire(x => x.UseSqlServerStorage("<connection string>"));
+            services.AddTransient<SyncService>();
+
+            services.AddHangfire(x => x.UseSqlServerStorage(Configuration["ConnectionString"]));
 
             // In production, the React files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
@@ -70,6 +76,12 @@ namespace OpenGovAlerts
 
             app.UseHangfireServer();
             app.UseHangfireDashboard();
+
+            AlertsDbContext db = app.ApplicationServices.GetService<AlertsDbContext>();
+            db.UpdateSchema();
+
+            SyncService sync = app.ApplicationServices.GetService<SyncService>();
+            sync.ScheduleSynchronization();
         }
     }
 }

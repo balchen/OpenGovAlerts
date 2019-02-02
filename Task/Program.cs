@@ -79,8 +79,8 @@ namespace OpenGovAlerts
                         scraper = new Jupiter(client.JupiterUrl);
                     else if (!string.IsNullOrEmpty(client.SRUUrl))
                         scraper = new SRU(new Uri(client.SRUUrl));
-                else if (!string.IsNullOrEmpty(client.ACOSUrl))
-                    scraper = new ACOS(new Uri(client.ACOSUrl));
+                    else if (!string.IsNullOrEmpty(client.ACOSUrl))
+                        scraper = new ACOS(new Uri(client.ACOSUrl));
 
                     try
                     {
@@ -98,7 +98,7 @@ namespace OpenGovAlerts
 
                             foreach (var meeting in newMeetings.OrderByDescending(m => m.Date))
                             {
-                                body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.Name, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Topic);
+                                body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.BoardName, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Title);
                             }
 
                             body.Append("</table>");
