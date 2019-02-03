@@ -5,6 +5,6 @@ namespace OpenGov.Storage
 {
     public interface IStorage
     {
-        Task AddDocument(Meeting meeting, Document document);
+        Task<string> AddDocument(Meeting meeting, Document document);
     }
 }

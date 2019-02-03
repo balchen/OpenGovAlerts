@@ -46,7 +46,7 @@ namespace OpenGov.Storage
 
             var client = new DropboxClient(accessToken, config);
 
-            string path = Path.Combine(baseFolder, meeting.ClientId, meeting.Phrase, meeting.Name, meeting.Date.ToString("yyyy-MM-dd"));
+            string path = Path.Combine(baseFolder, meeting.Source.Name, meeting.BoardName, meeting.Title, meeting.Date.ToString("yyyy-MM-dd"));
             var filename = new string(document.Title.Select(ch => invalidFileNameChars.Contains(ch) ? '_' : ch).ToArray());
 
             try
