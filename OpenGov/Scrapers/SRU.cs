@@ -35,7 +35,7 @@ namespace OpenGov.Scrapers
                     foreach (dynamic itemDocument in item.Dokumenter)
                     {
                         Document document = new Document {
-                            Name = itemDocument.Tittel,
+                            Title = itemDocument.Tittel,
                             Type = itemDocument.Dokumenttilknytning,
                             Url = new Uri(baseUrl, string.Format("/api/utvalg/{0}/moter/{1}/dokumenter/{2}", meeting.BoardId, meeting.MeetingId, itemDocument.Rekkefolge))
                         };

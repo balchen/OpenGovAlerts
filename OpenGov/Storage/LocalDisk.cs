@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace OpenGov.Storage
 {
-    public class LocalDisk
+    public class LocalDisk: IStorage
     {
         private string basePath;
         static readonly char[] invalidFileNameChars = Path.GetInvalidFileNameChars();
@@ -25,7 +25,7 @@ namespace OpenGov.Storage
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
 
-            var filename = new string(document.Name.Select(ch => invalidFileNameChars.Contains(ch) ? '_' : ch).ToArray());
+            var filename = new string(document.Title.Select(ch => invalidFileNameChars.Contains(ch) ? '_' : ch).ToArray());
             using (var output = new FileStream(Path.Combine(path, filename + ".pdf"), FileMode.OpenOrCreate, FileAccess.Write))
             {
                 Stream input = await http.GetStreamAsync(document.Url);

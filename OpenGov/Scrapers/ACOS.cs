@@ -135,7 +135,7 @@ namespace OpenGov.Scrapers
                     {
                         documents.Add(new Document
                         {
-                            Name = documentNode.InnerText,
+                            Title = documentNode.InnerText,
                             Type = documentNode.NextSibling.InnerText,
                             Url = new Uri(new Uri(meetingUrl), HttpUtility.HtmlDecode(documentNode.Attributes["href"].Value))
                         });
