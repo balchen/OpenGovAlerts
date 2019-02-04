@@ -65,9 +65,7 @@ namespace OpenGovAlerts.Services
         {
             foreach (Search search in db.Searches.Include(s => s.Observer).Include(s => s.SeenMeetings))
             {
-                // TODO: limit search to selected sources, or search all sources.
-
-                foreach (Meeting meeting in db.Meetings.Include(m => m.Documents).Where(m => !search.SeenMeetings.Contains(m)))
+                foreach (Meeting meeting in db.Meetings.Include(m => m.Documents).Where(m => (search.Sources.Count == 0 || search.Sources.Contains(m.Source)) && !search.SeenMeetings.Contains(m)))
                 {
                     search.SeenMeetings.Add(meeting);
 
@@ -123,8 +121,9 @@ namespace OpenGovAlerts.Services
                 {
                     if (response.Content.Headers.ContentType.MediaType == "application/pdf")
                     {
-                        // TODO
-                        // extract text from PDF
+                        var ocr = new IronOcr.AutoOcr();
+                        var result = ocr.ReadPdf(await response.Content.ReadAsStreamAsync());
+                        document.Text = result.Text;
                     }
                 }
             }
