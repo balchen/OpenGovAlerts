@@ -1,5 +1,6 @@
 ﻿using Dropbox.Api;
 using Dropbox.Api.Files;
+using Dropbox.Api.Sharing;
 using OpenGov.Models;
 using System;
 using System.IO;
@@ -77,6 +78,10 @@ namespace OpenGov.Storage
                 Stream input = await httpClient.GetStreamAsync(document.Url);
 
                 FileMetadata file = await client.Files.UploadAsync(filePath, body: input);
+
+                SharedLinkMetadata link = await client.Sharing.CreateSharedLinkWithSettingsAsync(new CreateSharedLinkWithSettingsArg(file.PathLower));
+
+                return link.Url;
             }
             catch (ApiException<UploadError> ex)
             {
@@ -86,8 +91,6 @@ namespace OpenGov.Storage
             {
                 throw new ApplicationException(string.Format("Could not upload document {0} to path {1} because of error {2}", document.Url, filePath, e.Message));
             }
-
-            return "";
         }
     }
 }

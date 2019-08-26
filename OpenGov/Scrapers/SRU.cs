@@ -68,7 +68,7 @@ namespace OpenGov.Scrapers
                     foreach (dynamic item in boardMeeting.Behandlinger)
                     {
                         string title = item.Tittel;
-                        if (title.ToLower().Contains(phrase.ToLower()))
+                        if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase.ToLower()))
                         {
                             Meeting meeting = new Meeting();
 

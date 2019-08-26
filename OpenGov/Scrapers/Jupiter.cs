@@ -73,7 +73,7 @@ namespace OpenGov.Scrapers
                         {
                             string agendaItemTitle = agendaItem.InnerText;
 
-                            if (agendaItemTitle.ToLower().Contains(phrase))
+                            if (string.IsNullOrEmpty(phrase) || agendaItemTitle.ToLower().Contains(phrase))
                             {
                                 newMeetings.Add(new Meeting
                                 {

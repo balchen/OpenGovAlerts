@@ -96,7 +96,7 @@ namespace OpenGov.Scrapers
 
                 if (agendaItemId != null && title != null)
                 {
-                    if (title.ToLower().Contains(phrase))
+                    if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase))
                     {
                         return new Meeting
                         {

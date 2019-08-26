@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
 using OpenGov.Notifiers;
+using OpenGov.Storage;
 
 namespace OpenGovAlerts.Services
 {
@@ -155,6 +156,20 @@ namespace OpenGovAlerts.Services
                     return new SRU(new Uri(parameters));
                 default:
                     throw new ArgumentException("Invalid source URL " + sourceUrl);
+            }
+        }
+
+        private IStorage CreateStorage(string sourceUrl)
+        {
+            Uri sourceUri = new Uri(sourceUrl);
+            string type = sourceUri.Scheme;
+
+            switch (type)
+            {
+                case "dropbox":
+                    return new OpenGov.Storage.Dropbox(sourceUri.Host, sourceUri.PathAndQuery);
+                default:
+                    throw new ArgumentException("Invalid storage URL " + sourceUrl);
             }
         }
     }

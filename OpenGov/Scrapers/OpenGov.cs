@@ -24,6 +24,89 @@ namespace OpenGov.Scrapers
         {
             HttpClient http = new HttpClient();
 
+            List<Meeting> meetings;
+
+            if (!string.IsNullOrEmpty(phrase))
+            {
+                meetings = await FindByPhrase(phrase, seenMeetings, http);
+            }
+            else
+            {
+                meetings = await FindNew(seenMeetings, http);
+            }
+
+            return meetings;
+        }
+
+        private async Task<List<Meeting>> FindNew(ISet<string> seenMeetings, HttpClient http)
+        {
+            Uri url = new Uri(string.Format("http://opengov.cloudapp.net/Meetings/{0}", clientId));
+
+            string html = await http.GetStringAsync(url);
+
+            HtmlDocument doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            List<Meeting> newMeetings = new List<Meeting>();
+
+            var meetings = doc.DocumentNode.SelectNodes("//div[@class='findMeetings findMeetingsMainPage']/descendant::div[@class='meetingList']/ul/li/a");
+
+            if (meetings != null)
+            {
+                foreach (var meeting in meetings)
+                {
+                    var meetingUrl = meeting.Attributes["href"].Value;
+                    Uri meetingUri = new Uri(url, meetingUrl);
+                    meetingUrl = meetingUri.ToString();
+
+                    if (seenMeetings.Contains(meetingUrl))
+                        continue;
+
+                    DateTime meetingDate = DateTime.ParseExact(HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText), "dd.MM.yyyy", CultureInfo.CurrentCulture);
+                    newMeetings.AddRange(await FindAgendaItems(meetingUrl, meetingDate, clientId, http));
+                }
+            }
+
+            return newMeetings;
+        }
+
+        private async Task<IEnumerable<Meeting>> FindAgendaItems(string meetingUrl, DateTime meetingDate, string clientId, HttpClient http)
+        {
+            string html = await http.GetStringAsync(meetingUrl);
+
+            HtmlDocument doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            List<Meeting> newMeetings = new List<Meeting>();
+
+            string boardName = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//div[@class='meetingsDetailsDiv']/div[@class='details']/div[@class='detailsList']/div[@class='detailContent']").InnerText);
+
+            var agendaItems = doc.DocumentNode.SelectNodes("//div[@class='meetingAgendaList']/ul/li/a");
+
+            if (agendaItems != null)
+            {
+                foreach (var agendaItem in agendaItems)
+                {
+                    string id = agendaItem.ParentNode.SelectSingleNode("descendant::div[@class='panel']").Attributes["id"].Value;
+                    string url = string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/LoadAgendaItemDetail/{1}", clientId, id);
+                    string title = HttpUtility.HtmlDecode(agendaItem.SelectSingleNode("descendant::div[@class='accordionTitle']").InnerText);
+
+                    newMeetings.Add(new Meeting
+                    {
+                        BoardName = boardName,
+                        Title = title,
+                        Url = new Uri(meetingUrl),
+                        Date = meetingDate,
+                        AgendaItemId = id
+                    });
+                }
+            }
+
+            return newMeetings;
+        }
+
+        private async Task<List<Meeting>> FindByPhrase(string phrase, ISet<string> seenMeetings, HttpClient http)
+        {
             Uri url = new Uri(string.Format("http://opengov.cloudapp.net/Meetings/{0}/AgendaItems/Search?q={1}", clientId, phrase));
 
             string html = await http.GetStringAsync(url);
