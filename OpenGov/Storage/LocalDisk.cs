@@ -1,4 +1,5 @@
 ﻿using OpenGov.Models;
+using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -16,7 +17,7 @@ namespace OpenGov.Storage
             this.basePath = basePath;
         }
 
-        public async Task<string> AddDocument(Meeting meeting, Document document)
+        public async Task<Uri> AddDocument(Meeting meeting, Document document, string path = "")
         {
             HttpClient http = new HttpClient();
 
@@ -32,7 +33,7 @@ namespace OpenGov.Storage
                 await input.CopyToAsync(output);
             }
 
-            return path;
+            return new Uri("file:///" + path);
         }
     }
 }

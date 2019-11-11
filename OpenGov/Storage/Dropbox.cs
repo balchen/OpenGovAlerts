@@ -1,5 +1,6 @@
 ﻿using Dropbox.Api;
 using Dropbox.Api.Files;
+using Dropbox.Api.Sharing;
 using OpenGov.Models;
 using System;
 using System.IO;
@@ -21,7 +22,7 @@ namespace OpenGov.Storage
             this.baseFolder = baseFolder;
         }
 
-        public async Task<string> AddDocument(Meeting meeting, Document document)
+        public async Task<Uri> AddDocument(Meeting meeting, Document document, string path = "")
         {
             DropboxCertHelper.InitializeCertPinning();
 
@@ -46,7 +47,9 @@ namespace OpenGov.Storage
 
             var client = new DropboxClient(accessToken, config);
 
-            string path = Path.Combine(baseFolder, meeting.Source.Name, meeting.BoardName, meeting.Title, meeting.Date.ToString("yyyy-MM-dd"));
+            if (string.IsNullOrEmpty(path))
+                path = Path.Combine(baseFolder, meeting.Source.Name, meeting.Title, meeting.Date.ToString("yyyy-MM-dd") + "-" + meeting.BoardName);
+
             var filename = new string(document.Title.Select(ch => invalidFileNameChars.Contains(ch) ? '_' : ch).ToArray());
 
             try
@@ -77,6 +80,9 @@ namespace OpenGov.Storage
                 Stream input = await httpClient.GetStreamAsync(document.Url);
 
                 FileMetadata file = await client.Files.UploadAsync(filePath, body: input);
+
+                SharedLinkMetadata link = await client.Sharing.CreateSharedLinkWithSettingsAsync(file.PathLower, new SharedLinkSettings(RequestedVisibility.Public.Instance));
+                return new Uri(link.Url);
             }
             catch (ApiException<UploadError> ex)
             {
@@ -86,8 +92,6 @@ namespace OpenGov.Storage
             {
                 throw new ApplicationException(string.Format("Could not upload document {0} to path {1} because of error {2}", document.Url, filePath, e.Message));
             }
-
-            return "";
         }
     }
 }

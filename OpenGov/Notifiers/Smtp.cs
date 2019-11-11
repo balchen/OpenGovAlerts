@@ -19,10 +19,7 @@ namespace OpenGov.Notifiers
 
         public async Task Notify(IEnumerable<Match> matches, Observer observer)
         {
-            MailMessage email = new MailMessage(observer.SmtpConfig.Sender, observer.Email);
-            email.Subject = "Nye møter for " + observer.Name;
-
-            StringBuilder body = new StringBuilder();
+            StringBuilder body = new StringBuilder("<html><head></head><body>");
 
             foreach (var searches in matches.GroupBy(m => m.Search))
             {
@@ -36,21 +33,31 @@ namespace OpenGov.Notifiers
                 body.Append("</table>");
             }
 
-            email.Body = body.ToString();
-            email.IsBodyHtml = true;
+            body.Append("</body></html>");
 
-            SmtpClient smtp = new SmtpClient(observer.SmtpConfig.Server, observer.SmtpConfig.Port);
-            smtp.UseDefaultCredentials = false;
-            smtp.Credentials = new NetworkCredential(observer.SmtpConfig.Sender, observer.SmtpConfig.Password);
+            string bodyString = body.ToString();
 
-            if (observer.SmtpConfig.UseSsl)
+            foreach (SmtpConfig smtpConfig in observer.SmtpConfig)
             {
-                smtp.EnableSsl = true;
+                MailMessage email = new MailMessage(smtpConfig.Sender, observer.Email);
+                email.Subject = "Nye møter for " + observer.Name;
 
-                NEVER_EAT_POISON_Disable_CertificateValidation();
+                email.Body = bodyString;
+                email.IsBodyHtml = true;
+
+                SmtpClient smtp = new SmtpClient(smtpConfig.Server, smtpConfig.Port);
+                smtp.UseDefaultCredentials = false;
+                smtp.Credentials = new NetworkCredential(smtpConfig.Sender, smtpConfig.Password);
+
+                if (smtpConfig.UseSsl)
+                {
+                    smtp.EnableSsl = true;
+
+                    NEVER_EAT_POISON_Disable_CertificateValidation();
+                }
+
+                await smtp.SendMailAsync(email);
             }
-
-            await smtp.SendMailAsync(email);
         }
 
         [Obsolete("Do not use this in Production code!!!", false)]

@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
 using OpenGov.Notifiers;
+using OpenGov.Storage;
 
 namespace OpenGovAlerts.Services
 {
@@ -83,6 +84,9 @@ namespace OpenGovAlerts.Services
         {
             foreach (var toNotify in await db.Matches.Include(m => m.Search).ThenInclude(s => s.Observer).Include(m => m.Meeting).ThenInclude(m => m.Source).Where(m => m.TimeNotified == null).GroupBy(m => m.Search.Observer).ToListAsync())
             {
+                await UploadToStorage(toNotify.Key, toNotify);
+                AddToTaskManager(toNotify.Key, toNotify);
+
                 Smtp smtp = new Smtp();
                 await smtp.Notify(toNotify, toNotify.Key);
 
@@ -92,6 +96,43 @@ namespace OpenGovAlerts.Services
                 }
 
                 await db.SaveChangesAsync();
+            }
+        }
+
+        private void AddToTaskManager(Observer key, IEnumerable<Match> toNotify)
+        {
+            throw new NotImplementedException();
+        }
+
+        private async Task UploadToStorage(Observer observer, IEnumerable<Match> matches)
+        {
+            foreach (StorageConfig storageConfig in observer.Storage)
+            {
+                IStorage storageProvider = GetStorageProvider(storageConfig.Url);
+
+                foreach (Match match in matches)
+                {
+                    foreach (Document document in match.Meeting.Documents)
+                    {
+                        string path = Path.Combine(match.Meeting.Source.Name, match.Search.Name, match.Meeting.Date.ToString("yyyy-MM-dd") + "-" + match.Meeting.BoardName);
+                        Uri documentUrl = await storageProvider.AddDocument(match.Meeting, document, path);
+                    }
+                }
+            }
+        }
+
+        private IStorage GetStorageProvider(string url)
+        {
+            Uri uri = new Uri(url);
+
+            switch (uri.Scheme)
+            {
+                case "dropbox":
+                    return new OpenGov.Storage.Dropbox(uri.UserInfo, uri.PathAndQuery);
+                case "file":
+                    return new LocalDisk(uri.PathAndQuery);
+                default:
+                    throw new ArgumentException("Unknown storage provider URL " + url);
             }
         }
 
