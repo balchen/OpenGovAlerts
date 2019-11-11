@@ -81,7 +81,7 @@ namespace OpenGov.Storage
 
                 FileMetadata file = await client.Files.UploadAsync(filePath, body: input);
 
-                SharedLinkMetadata link = await client.Sharing.CreateSharedLinkWithSettingsAsync(file.PathLower, new SharedLinkSettings(RequestedVisibility.Public.Instance));
+                SharedLinkMetadata link = await client.Sharing.CreateSharedLinkWithSettingsAsync(new CreateSharedLinkWithSettingsArg(file.PathLower));
                 return new Uri(link.Url);
             }
             catch (ApiException<UploadError> ex)

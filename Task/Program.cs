@@ -90,7 +90,7 @@ namespace OpenGovAlerts
                         {
                             seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
 
-                            MailMessage email = new MailMessage(config.Smtp.Sender, config.Smtp.Sender);
+                            MailMessage email = new MailMessage(config.Smtp.Sender, client.NotifyEmail);
                             email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
 
                             StringBuilder body = new StringBuilder();
