@@ -81,6 +81,8 @@ namespace OpenGovAlerts
                         scraper = new SRU(new Uri(client.SRUUrl));
                     else if (!string.IsNullOrEmpty(client.ACOSUrl))
                         scraper = new ACOS(new Uri(client.ACOSUrl));
+                    else if (!string.IsNullOrEmpty(client.ElementsUrl))
+                        scraper = new Elements(new Uri(client.ElementsUrl));
 
                     try
                     {
