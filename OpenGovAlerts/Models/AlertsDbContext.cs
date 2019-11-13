@@ -16,7 +16,7 @@ namespace OpenGovAlerts.Models
         public DbSet<Meeting> Meetings { get; set; }
         public DbSet<Source> Sources { get; set; }
         public DbSet<Document> Documents { get; set; }
-        public DbSet<Observer> Observer { get; set; }
+        public DbSet<Observer> Observers { get; set; }
         public DbSet<Search> Searches { get; set; }
         public DbSet<Match> Matches { get; set; }
 

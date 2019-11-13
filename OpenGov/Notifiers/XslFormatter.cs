@@ -19,11 +19,12 @@ namespace OpenGov.Notifiers
             transform.Load(XmlReader.Create(new StringReader(template)));
 
             XmlDocument source = new XmlDocument();
+            var root = source.DocumentElement.AppendChild(source.CreateElement("notification"));
 
             foreach (IGrouping<Search, Match> groupedSearch in indexedBySearch)
             {
                 var xmlSearch = source.CreateElement("search");
-                source.DocumentElement.AppendChild(xmlSearch);
+                root.AppendChild(xmlSearch);
 
                 xmlSearch.SetAttribute("id", groupedSearch.Key.Id.ToString());
                 xmlSearch.AppendChild(source.CreateElement("name", groupedSearch.Key.Name));
