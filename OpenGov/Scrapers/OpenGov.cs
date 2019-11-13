@@ -87,18 +87,23 @@ namespace OpenGov.Scrapers
             {
                 foreach (var agendaItem in agendaItems)
                 {
-                    string id = agendaItem.ParentNode.SelectSingleNode("descendant::div[@class='panel']").Attributes["id"].Value;
-                    string url = string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/LoadAgendaItemDetail/{1}", clientId, id);
-                    string title = HttpUtility.HtmlDecode(agendaItem.SelectSingleNode("descendant::div[@class='accordionTitle']").InnerText);
+                    var panel = agendaItem.ParentNode.SelectSingleNode("descendant::div[@class='panel']");
 
-                    newMeetings.Add(new Meeting
+                    if (panel != null)
                     {
-                        BoardName = boardName,
-                        Title = title,
-                        Url = new Uri(meetingUrl),
-                        Date = meetingDate,
-                        AgendaItemId = id
-                    });
+                        string id = panel.Attributes["id"].Value;
+                        string url = string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/LoadAgendaItemDetail/{1}", clientId, id);
+                        string title = HttpUtility.HtmlDecode(agendaItem.SelectSingleNode("descendant::div[@class='accordionTitle']").InnerText);
+
+                        newMeetings.Add(new Meeting
+                        {
+                            BoardName = boardName,
+                            Title = title,
+                            Url = new Uri(meetingUrl),
+                            Date = meetingDate,
+                            AgendaItemId = id
+                        });
+                    }
                 }
             }
 

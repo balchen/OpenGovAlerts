@@ -85,7 +85,7 @@ namespace OpenGov.Scrapers
                 string agendaItemId = null;
                 string title = null;
 
-                foreach (var agendaDetails in agendaItem.SelectNodes("div[@class='det']/h2/a"))
+                foreach (var agendaDetails in agendaItem.SelectNodes("div[@class='det']/h3/a"))
                 {
                     if (agendaDetails.Attributes["id"] != null)
                         agendaItemId = agendaDetails.Attributes["id"].Value;
@@ -100,6 +100,7 @@ namespace OpenGov.Scrapers
                     {
                         return new Meeting
                         {
+                            Id = int.Parse(meetingId),
                             AgendaItemId = agendaItemId,
                             BoardId = boardId,
                             BoardName = boardName,
@@ -117,7 +118,7 @@ namespace OpenGov.Scrapers
 
         public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
         {
-            string meetingUrl = url + "?response=mote&moteid=133";
+            string meetingUrl = url + "?response=mote&moteid=" + meeting.Id;
 
             HtmlDocument meetingDoc = new HtmlDocument();
 
@@ -125,7 +126,7 @@ namespace OpenGov.Scrapers
 
             List<Document> documents = new List<Document>();
 
-            var agendaItem = meetingDoc.DocumentNode.SelectSingleNode("//div[@id='div_sok_resultstable']//li[/a[@id='" + meeting.AgendaItemId + "']]");
+            var agendaItem = meetingDoc.DocumentNode.SelectSingleNode("//div[@id='div_sok_resultstable']//li[//a[@id='" + meeting.AgendaItemId + "']]");
 
             foreach (var documentsHeading in agendaItem.SelectNodes("descendant::h3"))
             {

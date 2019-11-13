@@ -21,7 +21,8 @@ namespace OpenGov.Storage
         {
             HttpClient http = new HttpClient();
 
-            string path = Path.Combine(basePath, meeting.Source.Name, meeting.BoardName, meeting.Date.ToString("yyyy-MM-dd"));
+            if (string.IsNullOrEmpty(path))
+                path = Path.Combine(basePath, meeting.Source.Name, meeting.BoardName, meeting.Date.ToString("yyyy-MM-dd"));
 
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);

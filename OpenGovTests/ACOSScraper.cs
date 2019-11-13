@@ -1,18 +1,19 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenGov.Models;
 using OpenGov.Scrapers;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace OpenGovTests
 {
     [TestClass]
-    public class OpenGovScraper
+    public class ACOSScraper
     {
         [TestMethod]
         public async Task FindNew()
         {
-            IScraper scraper = new OpenGov.Scrapers.OpenGov("STAVANGER");
+            IScraper scraper = new OpenGov.Scrapers.ACOS(new Uri("https://innsyn.onacos.no/gjesdal/wfinnsyn.ashx"));
 
             var meetings = await scraper.FindMeetings(null, new HashSet<string>());
 
