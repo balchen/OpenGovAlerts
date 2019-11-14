@@ -84,8 +84,8 @@ namespace OpenGovAlerts.Services
         {
             foreach (var toNotify in await db.Matches.Include(m => m.Search).ThenInclude(s => s.Observer).Include(m => m.Meeting).ThenInclude(m => m.Source).Where(m => m.TimeNotified == null).GroupBy(m => m.Search.Observer).ToListAsync())
             {
-                await UploadToStorage(toNotify.Key, toNotify);
-                AddToTaskManager(toNotify.Key, toNotify);
+                //await UploadToStorage(toNotify.Key, toNotify);
+                //await AddToTaskManager(toNotify.Key, toNotify);
 
                 Smtp smtp = new Smtp();
                 await smtp.Notify(toNotify, toNotify.Key);
@@ -99,7 +99,7 @@ namespace OpenGovAlerts.Services
             }
         }
 
-        private void AddToTaskManager(Observer key, IEnumerable<Match> toNotify)
+        private async Task AddToTaskManager(Observer key, IEnumerable<Match> toNotify)
         {
             throw new NotImplementedException();
         }
@@ -121,21 +121,6 @@ namespace OpenGovAlerts.Services
             }
         }
 
-        private IStorage GetStorageProvider(string url)
-        {
-            Uri uri = new Uri(url);
-
-            switch (uri.Scheme)
-            {
-                case "dropbox":
-                    return new OpenGov.Storage.Dropbox(uri.UserInfo, uri.PathAndQuery);
-                case "file":
-                    return new LocalDisk(uri.PathAndQuery);
-                default:
-                    throw new ArgumentException("Unknown storage provider URL " + url);
-            }
-        }
-
         private bool Match(Search search, Meeting meeting)
         {
             if (meeting.Title.Contains(search.Phrase, StringComparison.CurrentCultureIgnoreCase))
@@ -150,7 +135,7 @@ namespace OpenGovAlerts.Services
             return false;
         }
 
-        private async Task GetText(Document document)
+        public static async Task GetText(Document document)
         {
             try
             {
@@ -179,7 +164,7 @@ namespace OpenGovAlerts.Services
             BackgroundJob.Schedule(() => Synchronize(true), new DateTimeOffset(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, 15, 00, 00, TimeSpan.FromSeconds(0)));
         }
 
-        private IScraper CreateScraper(string sourceUrl)
+        public static IScraper CreateScraper(string sourceUrl)
         {
             string type = sourceUrl.Split(":")[0];
             string parameters = sourceUrl.Substring(type.Length + 1);
@@ -194,22 +179,25 @@ namespace OpenGovAlerts.Services
                     return new OpenGov.Scrapers.OpenGov(parameters);
                 case "sru":
                     return new SRU(new Uri(parameters));
+                case "elements":
+                    return new Elements(new Uri(parameters));
                 default:
                     throw new ArgumentException("Invalid source URL " + sourceUrl);
             }
         }
 
-        private IStorage CreateStorage(string sourceUrl)
+        public static IStorage GetStorageProvider(string url)
         {
-            Uri sourceUri = new Uri(sourceUrl);
-            string type = sourceUri.Scheme;
+            Uri uri = new Uri(url);
 
-            switch (type)
+            switch (uri.Scheme)
             {
                 case "dropbox":
-                    return new OpenGov.Storage.Dropbox(sourceUri.Host, sourceUri.PathAndQuery);
+                    return new OpenGov.Storage.Dropbox(uri.UserInfo, uri.PathAndQuery);
+                case "file":
+                    return new LocalDisk(uri.PathAndQuery);
                 default:
-                    throw new ArgumentException("Invalid storage URL " + sourceUrl);
+                    throw new ArgumentException("Unknown storage provider URL " + url);
             }
         }
     }
