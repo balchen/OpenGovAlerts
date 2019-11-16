@@ -81,13 +81,17 @@ namespace OpenGov.Scrapers
                     string title = caseLink.InnerText.Trim();
                     Uri caseUrl = new Uri(url, HttpUtility.HtmlDecode(caseLink.Attributes["href"].Value));
 
+                    var docsLink = caseRow.SelectSingleNode("descendant::td[@headers='utvCasesTypeJPDetaljer']/a[@class='registryentry-link']");
+                    Uri docsUrl = docsLink == null ? null : new Uri(url, HttpUtility.HtmlDecode(docsLink.Attributes["href"].Value));
+
                     if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase.ToLower()))
                     {
                         Meeting meeting = new Meeting();
                         meeting.Title = title;
-                        meeting.Url = caseUrl;
+                        meeting.Url = url;
                         meeting.BoardName = boardName;
                         meeting.Date = date;
+                        meeting.DocumentsUrl = docsUrl;
 
                         meetings.Add(meeting);
                     }
@@ -97,9 +101,34 @@ namespace OpenGov.Scrapers
             return meetings;
         }
 
-        public Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
+        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
         {
-            throw new System.NotImplementedException();
+            if (meeting.DocumentsUrl == null)
+                return new List<Document>();
+
+            HttpClient http = new HttpClient();
+            string html = await http.GetStringAsync(meeting.DocumentsUrl);
+
+            HtmlDocument doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            List<Document> documents = new List<Document>();
+
+            foreach (var docNode in doc.DocumentNode.SelectNodes("//table[@class='listTableClass document-load-target']/tbody/tr"))
+            {
+                var docLinkNode = docNode.SelectSingleNode("descendant::a");
+
+                Uri docUrl = docLinkNode == null ? null : new Uri(meeting.DocumentsUrl, HttpUtility.HtmlDecode(docLinkNode.Attributes["href"].Value));
+                string title = HttpUtility.HtmlDecode(docNode.SelectSingleNode("descendant::td[@headers='jpDocumentDocumentDescriptionTitle']").InnerText.Trim());
+
+                documents.Add(new Document
+                {
+                    Title = title,
+                    Url = docUrl
+                });
+            }
+
+            return documents;
         }
     }
 }

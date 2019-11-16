@@ -26,9 +26,9 @@ namespace OpenGovTests
 
             var meeting = meetingsList[0];
 
-            //var documents = new List<Document>(await scraper.GetDocuments(meeting));
+            var documents = new List<Document>(await scraper.GetDocuments(meeting));
 
-            //Assert.IsTrue(documents.Count > 0);
+            Assert.IsTrue(documents.Count > 0);
         }
     }
 }

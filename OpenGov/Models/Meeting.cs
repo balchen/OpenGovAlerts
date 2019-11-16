@@ -14,6 +14,7 @@ namespace OpenGov.Models
         public DateTime Date { get; set; }
         public string Title { get; set; }
         public Uri Url { get; set; }
+        public Uri DocumentsUrl { get; set; }
 
         public IList<Document> Documents { get; set; }
     }
