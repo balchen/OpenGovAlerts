@@ -11,6 +11,8 @@ using System.IO;
 using Microsoft.EntityFrameworkCore;
 using OpenGov.Notifiers;
 using OpenGov.Storage;
+using System.Net.Http.Headers;
+using IronPdf;
 
 namespace OpenGovAlerts.Services
 {
@@ -23,7 +25,7 @@ namespace OpenGovAlerts.Services
             this.db = db;
         }
 
-        public async void Synchronize(bool requeue = false)
+        public async Task Synchronize(bool requeue = false)
         {
             await FetchNewMeetings();
             await MatchSearches();
@@ -44,19 +46,18 @@ namespace OpenGovAlerts.Services
 
                 foreach (Meeting meeting in meetings)
                 {
+                    meeting.Source = source;
                     await db.Meetings.AddAsync(meeting);
 
                     IEnumerable<Document> documents = await scraper.GetDocuments(meeting);
 
                     foreach (Document document in documents)
                     {
+                        document.Meeting = meeting;
                         await GetText(document);
                         await db.Documents.AddAsync(document);
-                        meeting.Documents.Add(document);
                     }
                 }
-
-                await db.Meetings.AddRangeAsync(meetings);
 
                 await db.SaveChangesAsync();
             }
@@ -64,11 +65,11 @@ namespace OpenGovAlerts.Services
 
         private async Task MatchSearches()
         {
-            foreach (Search search in db.Searches.Include(s => s.Observer).Include(s => s.SeenMeetings))
+            foreach (Search search in db.Searches.Include(s => s.Observer).Include(s => s.SeenMeetings).ThenInclude(sm => sm.Meeting))
             {
-                foreach (Meeting meeting in db.Meetings.Include(m => m.Documents).Where(m => (search.Sources.Count == 0 || search.Sources.Contains(m.Source)) && !search.SeenMeetings.Contains(m)))
+                foreach (Meeting meeting in db.Meetings.Include(m => m.Documents).Where(m => (search.Sources.Count == 0 || search.Sources.Any(ss => ss.SourceId == m.Source.Id)) && !search.SeenMeetings.Any(sm => sm.MeetingId == m.Id)))
                 {
-                    search.SeenMeetings.Add(meeting);
+                    await db.SeenMeetings.AddAsync(new SeenMeeting { Meeting = meeting, Search = search, DateSeen = DateTime.UtcNow });
 
                     if (Match(search, meeting))
                     {
@@ -128,7 +129,7 @@ namespace OpenGovAlerts.Services
 
             foreach (Document document in meeting.Documents)
             {
-                if (document.Text.Contains(search.Phrase, StringComparison.CurrentCultureIgnoreCase))
+                if (document.Text != null && document.Text.Contains(search.Phrase, StringComparison.CurrentCultureIgnoreCase))
                     return true;
             }
 
@@ -145,11 +146,18 @@ namespace OpenGovAlerts.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    if (response.Content.Headers.ContentType.MediaType == "application/pdf")
+                    MediaTypeHeaderValue contentType = response.Content.Headers.ContentType;
+                    KeyValuePair<string, IEnumerable<string>> rawHeaderValue = new KeyValuePair<string, IEnumerable<string>>();
+
+                    if (contentType == null)
                     {
-                        var ocr = new IronOcr.AutoOcr();
-                        var result = ocr.ReadPdf(await response.Content.ReadAsStreamAsync());
-                        document.Text = result.Text;
+                        rawHeaderValue = response.Content.Headers.FirstOrDefault(h => h.Key == "Content-Type");
+                    }
+
+                    if (contentType?.MediaType == "application/pdf" || rawHeaderValue.Value.Any(v => v.ToLower().Contains("pdf")))
+                    {
+                        PdfDocument pdf = new PdfDocument(await response.Content.ReadAsStreamAsync());
+                        document.Text = pdf.ExtractAllText();
                     }
                 }
             }

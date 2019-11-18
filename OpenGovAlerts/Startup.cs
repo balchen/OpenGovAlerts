@@ -41,7 +41,7 @@ namespace OpenGovAlerts
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, AlertsDbContext db, SyncService sync)
         {
             if (env.IsDevelopment())
             {
@@ -56,6 +56,19 @@ namespace OpenGovAlerts
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
+
+            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            {
+                StatsPollingInterval = 60,
+                Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
+            });
+
+            var options = new BackgroundJobServerOptions
+            {
+                WorkerCount = 1
+            };
+
+            app.UseHangfireServer(options);
 
             app.UseMvc(routes =>
             {
@@ -74,13 +87,8 @@ namespace OpenGovAlerts
                 }
             });
 
-            app.UseHangfireServer();
-            app.UseHangfireDashboard();
-
-            AlertsDbContext db = app.ApplicationServices.GetService<AlertsDbContext>();
             db.UpdateSchema();
 
-            SyncService sync = app.ApplicationServices.GetService<SyncService>();
             sync.ScheduleSynchronization();
         }
     }

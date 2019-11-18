@@ -16,6 +16,7 @@ namespace OpenGov.Models
         public Uri Url { get; set; }
         public Uri DocumentsUrl { get; set; }
 
+        public IList<Match> Matches { get; set; }
         public IList<Document> Documents { get; set; }
     }
 }

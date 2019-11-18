@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace OpenGov.Notifiers
 {
-    public class Smtp
+    public class Smtp: INotifier
     {
         public Smtp()
         {
@@ -23,11 +23,16 @@ namespace OpenGov.Notifiers
 
             foreach (var searches in matches.GroupBy(m => m.Search))
             {
-                body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0}:</h3>\r\n\r\n<table>", searches.Key.Name);
+                body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0}</h3>\r\n\r\n<table>", searches.Key.Name);
 
-                foreach (var match in searches.OrderByDescending(m => m.Meeting.Date))
+                foreach (var source in searches.GroupBy(m => m.Meeting.Source))
                 {
-                    body.AppendFormat("<tr><td>{3}</td><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td></tr>\r\n", match.Meeting.BoardName, match.Meeting.Url, match.Meeting.Date.ToString("dd.MM.yyyy"), match.Meeting.Source.Name);
+                    body.AppendFormat("<tr><td colspan=\"3\"><h4>{0}</h4></td></tr>\r\n", source.Key.Name);
+
+                    foreach (var match in source.OrderBy(m => m.Meeting.Date))
+                    {
+                        body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{4}</a></td></tr>\r\n", match.Meeting.BoardName, match.Meeting.Url, match.Meeting.Date.ToString("dd.MM.yyyy"), match.Meeting.Source.Name, match.Meeting.Title);
+                    }
                 }
 
                 body.Append("</table>");
@@ -37,27 +42,24 @@ namespace OpenGov.Notifiers
 
             string bodyString = body.ToString();
 
-            foreach (SmtpConfig smtpConfig in observer.SmtpConfig)
+            MailMessage email = new MailMessage(observer.SmtpSender, observer.Email);
+            email.Subject = "Nye møter for " + observer.Name;
+
+            email.Body = bodyString;
+            email.IsBodyHtml = true;
+
+            SmtpClient smtp = new SmtpClient(observer.SmtpServer, observer.SmtpPort);
+            smtp.UseDefaultCredentials = false;
+            smtp.Credentials = new NetworkCredential(observer.SmtpSender, observer.SmtpPassword);
+
+            if (observer.SmtpUseSsl)
             {
-                MailMessage email = new MailMessage(smtpConfig.Sender, observer.Email);
-                email.Subject = "Nye møter for " + observer.Name;
+                smtp.EnableSsl = true;
 
-                email.Body = bodyString;
-                email.IsBodyHtml = true;
-
-                SmtpClient smtp = new SmtpClient(smtpConfig.Server, smtpConfig.Port);
-                smtp.UseDefaultCredentials = false;
-                smtp.Credentials = new NetworkCredential(smtpConfig.Sender, smtpConfig.Password);
-
-                if (smtpConfig.UseSsl)
-                {
-                    smtp.EnableSsl = true;
-
-                    NEVER_EAT_POISON_Disable_CertificateValidation();
-                }
-
-                await smtp.SendMailAsync(email);
+                NEVER_EAT_POISON_Disable_CertificateValidation();
             }
+
+            await smtp.SendMailAsync(email);
         }
 
         [Obsolete("Do not use this in Production code!!!", false)]

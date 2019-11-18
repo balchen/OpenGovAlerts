@@ -10,8 +10,8 @@ namespace OpenGov.Models
         public string Name { get; set; }
         public string Phrase { get; set; }
         public DateTime Start { get; set; }
-        public IList<Source> Sources { get; set; }
-        public IList<Meeting> SeenMeetings { get; set; }
+        public IList<SearchSource> Sources { get; set; }
+        public IList<SeenMeeting> SeenMeetings { get; set; }
         public IList<Match> Matches { get; set; }
     }
 }

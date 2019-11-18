@@ -57,20 +57,21 @@ namespace OpenGov.Scrapers
                 {
                     var meetingUrl = meeting.Attributes["href"].Value;
                     Uri meetingUri = new Uri(url, meetingUrl);
+                    var meetingId = meetingUri.Segments[meetingUri.Segments.Length - 1];
                     meetingUrl = meetingUri.ToString();
 
                     if (seenMeetings.Contains(meetingUrl))
                         continue;
 
                     DateTime meetingDate = DateTime.ParseExact(HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText), "dd.MM.yyyy", CultureInfo.CurrentCulture);
-                    newMeetings.AddRange(await FindAgendaItems(meetingUrl, meetingDate, clientId, http));
+                    newMeetings.AddRange(await FindAgendaItems(meetingUrl, meetingId, meetingDate, clientId, http));
                 }
             }
 
             return newMeetings;
         }
 
-        private async Task<IEnumerable<Meeting>> FindAgendaItems(string meetingUrl, DateTime meetingDate, string clientId, HttpClient http)
+        private async Task<IEnumerable<Meeting>> FindAgendaItems(string meetingUrl, string meetingId, DateTime meetingDate, string clientId, HttpClient http)
         {
             string html = await http.GetStringAsync(meetingUrl);
 
@@ -79,7 +80,7 @@ namespace OpenGov.Scrapers
 
             List<Meeting> newMeetings = new List<Meeting>();
 
-            string boardName = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//div[@class='meetingsDetailsDiv']/div[@class='details']/div[@class='detailsList']/div[@class='detailContent']").InnerText);
+            string boardName = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//div[@class='meetingsDetailsDiv']/div[@class='details']/div[@class='detailsList']/div[@class='detailContent']").InnerText).Trim();
 
             var agendaItems = doc.DocumentNode.SelectNodes("//div[@class='meetingAgendaList']/ul/li/a");
 
@@ -92,14 +93,14 @@ namespace OpenGov.Scrapers
                     if (panel != null)
                     {
                         string id = panel.Attributes["id"].Value;
-                        string url = string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/LoadAgendaItemDetail/{1}", clientId, id);
-                        string title = HttpUtility.HtmlDecode(agendaItem.SelectSingleNode("descendant::div[@class='accordionTitle']").InnerText);
+                        string url = string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/Details/{2}?agendaItemId={1}", clientId, id, meetingId);
+                        string title = HttpUtility.HtmlDecode(agendaItem.SelectSingleNode("descendant::div[@class='accordionTitle']").InnerText).Trim();
 
                         newMeetings.Add(new Meeting
                         {
                             BoardName = boardName,
                             Title = title,
-                            Url = new Uri(meetingUrl),
+                            Url = new Uri(url),
                             Date = meetingDate,
                             AgendaItemId = id
                         });
@@ -134,10 +135,10 @@ namespace OpenGov.Scrapers
                     if (seenMeetings.Contains(meetingUrl))
                         continue;
 
-                    string name = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingName']/span").InnerText);
+                    string name = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingName']/span").InnerText).Trim();
                     DateTime date = DateTime.ParseExact(HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText), "dd.MM.yyyy", CultureInfo.CurrentCulture);
-                    string topic = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='serachMeetingResult']/p").InnerText);
-                    string agendaItemId = HttpUtility.ParseQueryString(meetingUri.Query).Get("agendaItemId");
+                    string topic = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='serachMeetingResult']/p").InnerText).Trim();
+                    string agendaItemId = HttpUtility.ParseQueryString(meetingUri.Query).Get("agendaItemId").Trim();
 
                     newMeetings.Add(new Meeting
                     {

@@ -1,4 +1,6 @@
-﻿namespace OpenGov.Models
+﻿using OpenGov.Models;
+
+namespace OpenGovAlerts
 {
     public class SmtpConfig
     {
