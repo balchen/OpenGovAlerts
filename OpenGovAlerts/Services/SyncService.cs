@@ -13,6 +13,7 @@ using OpenGov.Notifiers;
 using OpenGov.Storage;
 using System.Net.Http.Headers;
 using IronPdf;
+using Hangfire.Storage;
 
 namespace OpenGovAlerts.Services
 {
@@ -25,78 +26,79 @@ namespace OpenGovAlerts.Services
             this.db = db;
         }
 
-        public async Task Synchronize(bool requeue = false)
+        public async Task Synchronize()
         {
-            await FetchNewMeetings();
-            await MatchSearches();
-            await NotifyObservers();
+            await FetchNewMeetings().ConfigureAwait(false);
+            await MatchSearches().ConfigureAwait(false);
+            await NotifyObservers().ConfigureAwait(false);
+        }
 
-            if (requeue)
-                ScheduleSynchronization();
+        public void SynchronizeSync()
+        {
+            Synchronize().GetAwaiter().GetResult();
         }
 
         private async Task FetchNewMeetings()
         {
-            foreach (Source source in db.Sources)
+            foreach (Source source in await db.Sources.ToListAsync().ConfigureAwait(false))
             {
-                ISet<string> seenMeetings = new HashSet<string>(db.Meetings.Where(m => m.Source == source).Select(m => m.Url.ToString()));
+                ISet<string> seenMeetings = new HashSet<string>(await db.Meetings.Where(m => m.Source == source).Select(m => m.Url.ToString()).ToListAsync().ConfigureAwait(false));
                 IScraper scraper = CreateScraper(source.Url);
 
-                IEnumerable<Meeting> meetings = await scraper.FindMeetings(null, seenMeetings);
+                IEnumerable<Meeting> meetings = await scraper.FindMeetings(null, seenMeetings).ConfigureAwait(false);
 
                 foreach (Meeting meeting in meetings)
                 {
                     meeting.Source = source;
-                    await db.Meetings.AddAsync(meeting);
+                    await db.Meetings.AddAsync(meeting).ConfigureAwait(false);
 
-                    IEnumerable<Document> documents = await scraper.GetDocuments(meeting);
+                    IEnumerable<Document> documents = await scraper.GetDocuments(meeting).ConfigureAwait(false);
 
                     foreach (Document document in documents)
                     {
                         document.Meeting = meeting;
-                        await GetText(document);
-                        await db.Documents.AddAsync(document);
+                        await GetText(document).ConfigureAwait(false);
+                        await db.Documents.AddAsync(document).ConfigureAwait(false);
+                        await db.SaveChangesAsync().ConfigureAwait(false);
                     }
                 }
-
-                await db.SaveChangesAsync();
             }
         }
 
         private async Task MatchSearches()
         {
-            foreach (Search search in db.Searches.Include(s => s.Observer).Include(s => s.SeenMeetings).ThenInclude(sm => sm.Meeting))
+            foreach (Search search in await db.Searches.Include(s => s.Sources).Include(s => s.Observer).Include(s => s.SeenMeetings).ThenInclude(sm => sm.Meeting).ToListAsync().ConfigureAwait(false))
             {
-                foreach (Meeting meeting in db.Meetings.Include(m => m.Documents).Where(m => (search.Sources.Count == 0 || search.Sources.Any(ss => ss.SourceId == m.Source.Id)) && !search.SeenMeetings.Any(sm => sm.MeetingId == m.Id)))
+                foreach (Meeting meeting in await db.Meetings.Include(m => m.Documents).Where(m => (search.Sources.Count == 0 || search.Sources.Any(ss => ss.SourceId == m.Source.Id)) && !search.SeenMeetings.Any(sm => sm.MeetingId == m.Id)).ToListAsync().ConfigureAwait(false))
                 {
-                    await db.SeenMeetings.AddAsync(new SeenMeeting { Meeting = meeting, Search = search, DateSeen = DateTime.UtcNow });
+                    await db.SeenMeetings.AddAsync(new SeenMeeting { Meeting = meeting, Search = search, DateSeen = DateTime.UtcNow }).ConfigureAwait(false);
 
                     if (Match(search, meeting))
                     {
-                        await db.Matches.AddAsync(new Match { Meeting = meeting, Search = search, TimeFound = DateTime.UtcNow });
+                        await db.Matches.AddAsync(new Match { Meeting = meeting, Search = search, TimeFound = DateTime.UtcNow }).ConfigureAwait(false);
                     }
                 }
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync().ConfigureAwait(false);
         }
 
         private async Task NotifyObservers()
         {
-            foreach (var toNotify in await db.Matches.Include(m => m.Search).ThenInclude(s => s.Observer).Include(m => m.Meeting).ThenInclude(m => m.Source).Where(m => m.TimeNotified == null).GroupBy(m => m.Search.Observer).ToListAsync())
+            foreach (var toNotify in await db.Matches.Include(m => m.Search).ThenInclude(s => s.Observer).Include(m => m.Meeting).ThenInclude(m => m.Source).Where(m => m.TimeNotified == null).GroupBy(m => m.Search.Observer).ToListAsync().ConfigureAwait(false))
             {
-                //await UploadToStorage(toNotify.Key, toNotify);
-                //await AddToTaskManager(toNotify.Key, toNotify);
+                //await UploadToStorage(toNotify.Key, toNotify).ConfigureAwait(false);
+                //await AddToTaskManager(toNotify.Key, toNotify).ConfigureAwait(false);
 
                 Smtp smtp = new Smtp();
-                await smtp.Notify(toNotify, toNotify.Key);
+                await smtp.Notify(toNotify, toNotify.Key).ConfigureAwait(false);
 
                 foreach (Match match in toNotify)
                 {
                     match.TimeNotified = DateTime.UtcNow;
                 }
 
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
@@ -116,7 +118,7 @@ namespace OpenGovAlerts.Services
                     foreach (Document document in match.Meeting.Documents)
                     {
                         string path = Path.Combine(match.Meeting.Source.Name, match.Search.Name, match.Meeting.Date.ToString("yyyy-MM-dd") + "-" + match.Meeting.BoardName);
-                        Uri documentUrl = await storageProvider.AddDocument(match.Meeting, document, path);
+                        Uri documentUrl = await storageProvider.AddDocument(match.Meeting, document, path).ConfigureAwait(false);
                     }
                 }
             }
@@ -142,7 +144,7 @@ namespace OpenGovAlerts.Services
             {
                 HttpClient http = new HttpClient();
 
-                var response = await http.GetAsync(document.Url);
+                var response = await http.GetAsync(document.Url).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -156,7 +158,7 @@ namespace OpenGovAlerts.Services
 
                     if (contentType?.MediaType == "application/pdf" || rawHeaderValue.Value.Any(v => v.ToLower().Contains("pdf")))
                     {
-                        PdfDocument pdf = new PdfDocument(await response.Content.ReadAsStreamAsync());
+                        PdfDocument pdf = new PdfDocument(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
                         document.Text = pdf.ExtractAllText();
                     }
                 }
@@ -169,7 +171,15 @@ namespace OpenGovAlerts.Services
 
         public void ScheduleSynchronization()
         {
-            BackgroundJob.Schedule(() => Synchronize(true), new DateTimeOffset(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, 15, 00, 00, TimeSpan.FromSeconds(0)));
+            using (var connection = JobStorage.Current.GetConnection())
+            {
+                foreach (var recurringJob in StorageConnectionExtensions.GetRecurringJobs(connection))
+                {
+                    RecurringJob.RemoveIfExists(recurringJob.Id);
+                }
+            }
+
+            RecurringJob.AddOrUpdate(() => SynchronizeSync(), Cron.Daily(0, 30), TimeZoneInfo.Local);
         }
 
         public static IScraper CreateScraper(string sourceUrl)

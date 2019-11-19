@@ -41,6 +41,13 @@ namespace OpenGovAlerts.Models
                 .HasMany(o => o.Searches)
                 .WithOne(s => s.Observer);
 
+            modelBuilder.Entity<Observer>()
+                .Property(o => o.Emails)
+                .HasColumnName("Email")
+                .HasConversion(
+                    e => string.Join(',', e),
+                    e => e.Split(',', StringSplitOptions.RemoveEmptyEntries));
+
             modelBuilder.Entity<SearchSource>()
                 .HasKey(s => new { s.SearchId, s.SourceId });
 

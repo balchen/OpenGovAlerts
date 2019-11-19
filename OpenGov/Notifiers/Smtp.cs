@@ -42,8 +42,11 @@ namespace OpenGov.Notifiers
 
             string bodyString = body.ToString();
 
-            MailMessage email = new MailMessage(observer.SmtpSender, observer.Email);
-            email.Subject = "Nye møter for " + observer.Name;
+            MailMessage email = new MailMessage();
+            email.From = new MailAddress(observer.SmtpSender);
+            foreach (string to in observer.Emails)
+                email.To.Add(new MailAddress(to, observer.Name));
+            email.Subject = "Varsel om nye møter til " + observer.Name;
 
             email.Body = bodyString;
             email.IsBodyHtml = true;
