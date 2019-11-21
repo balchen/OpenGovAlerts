@@ -7,7 +7,7 @@ namespace OpenGov.Models
         public int Id { get; set; }
         public string Name { get; set; }
         public string[] Emails { get; set; }
-
+        public IList<Search> Searches { get; set; }
         public string SmtpSender { get; set; }
         public string SmtpPassword { get; set; }
         public string SmtpServer { get; set; }
