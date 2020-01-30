@@ -45,21 +45,29 @@ namespace OpenGov.Scrapers
                 {
                     month++;
 
-                    string meetingCell = monthCell.InnerText.Trim();
+                    var meetingLinks = monthCell.SelectNodes("a");
 
-                    if (meetingCell != "")
+                    if (meetingLinks != null)
                     {
-                        int day = int.Parse(meetingCell);
-                        Uri meetingUrl = new Uri(calendarUrl, HttpUtility.HtmlDecode(monthCell.SelectSingleNode("a").Attributes["href"].Value));
-                        DateTime date = new DateTime(year, month, day);
+                        foreach (var meetingLink in meetingLinks)
+                        {
+                            string meetingCell = meetingLink.InnerText.Trim();
 
-                        if (seenMeetings.Contains(meetingUrl.ToString()))
-                            continue;
+                            if (meetingCell != "")
+                            {
+                                int day = int.Parse(meetingCell);
+                                Uri meetingUrl = new Uri(calendarUrl, HttpUtility.HtmlDecode(meetingLink.Attributes["href"].Value));
+                                DateTime date = new DateTime(year, month, day);
 
-                        var meeting = await FindMeeting(phrase, meetingUrl, date, boardName, boardId);
+                                if (seenMeetings.Contains(meetingUrl.ToString()))
+                                    continue;
 
-                        if (meeting != null)
-                            newMeetings.Add(meeting);
+                                var meeting = await FindMeeting(phrase, meetingUrl, date, boardName, boardId);
+
+                                if (meeting != null)
+                                    newMeetings.Add(meeting);
+                            }
+                        }
                     }
                 }
             }

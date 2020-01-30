@@ -13,7 +13,7 @@ namespace OpenGovTests
         [TestMethod]
         public async Task FindNew()
         {
-            IScraper scraper = new OpenGov.Scrapers.ACOS(new Uri("https://innsyn.onacos.no/gjesdal/wfinnsyn.ashx"));
+            IScraper scraper = new OpenGov.Scrapers.ACOS(new Uri("http://nyttinnsyn.sola.kommune.no/wfinnsyn.ashx"));
 
             var meetings = await scraper.FindMeetings(null, new HashSet<string>());
 
