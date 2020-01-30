@@ -88,18 +88,19 @@ namespace OpenGovAlerts.Services
             foreach (var toNotify in await db.Matches
                 .Include(m => m.Search).ThenInclude(s => s.Subscribers).ThenInclude(s => s.Observer)
                 .Include(m => m.Meeting).ThenInclude(m => m.Source)
-                .Select(m => new { Match = m, Search = m.Search, Subscribers = m.Search.Subscribers })
+                .SelectMany(m => m.Search.Subscribers.Select(s => new { Match = m, Search = m.Search, Subscriber = s.Observer }))
                 .Where(m => m.Match.TimeNotified == null)
-                .GroupBy(m => m.Search.Subscribers)
+                .GroupBy(m => m.Subscriber)
                 .ToListAsync().ConfigureAwait(false))
             {
                 //await UploadToStorage(toNotify.Key, toNotify).ConfigureAwait(false);
                 //await AddToTaskManager(toNotify.Key, toNotify).ConfigureAwait(false);
 
                 Smtp smtp = new Smtp();
-                await smtp.Notify(toNotify, toNotify.Key).ConfigureAwait(false);
+                var matches = toNotify.Select(m => m.Match);
+                await smtp.Notify(matches, toNotify.Key).ConfigureAwait(false);
 
-                foreach (Match match in toNotify)
+                foreach (Match match in matches)
                 {
                     match.TimeNotified = DateTime.UtcNow;
                 }
