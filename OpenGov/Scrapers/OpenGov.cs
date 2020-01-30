@@ -181,7 +181,7 @@ namespace OpenGov.Scrapers
                 if (fileNameNode != null)
                 {
                     document.Title = fileNameNode.InnerText;
-                    document.Type = documentLink.SelectSingleNode("descendant::div[@class='fileDocumentCategory']").InnerText;
+                    document.Type = documentLink.SelectSingleNode("descendant::div[@class='fileDocumentCategory']")?.InnerText;
 
                     documents.Add(document);
                 }

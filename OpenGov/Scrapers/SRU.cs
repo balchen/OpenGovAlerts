@@ -65,23 +65,26 @@ namespace OpenGov.Scrapers
                     if (seenMeetings.Contains(meetingUrl))
                         continue;
 
-                    foreach (dynamic item in boardMeeting.Behandlinger)
+                    if (boardMeeting.Behandlinger != null)
                     {
-                        string title = item.Tittel;
-                        if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase.ToLower()))
+                        foreach (dynamic item in boardMeeting.Behandlinger)
                         {
-                            Meeting meeting = new Meeting();
+                            string title = item.Tittel;
+                            if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase.ToLower()))
+                            {
+                                Meeting meeting = new Meeting();
 
-                            meeting.BoardId = board.Id;
-                            meeting.MeetingId = boardMeeting.Id;
-                            meeting.AgendaItemId = item.Id;
+                                meeting.BoardId = board.Id;
+                                meeting.MeetingId = boardMeeting.Id;
+                                meeting.AgendaItemId = item.Id;
 
-                            meeting.Date = boardMeeting.Start;
-                            meeting.BoardName = board.Name;
-                            meeting.Title = item.Tittel;
-                            meeting.Url = new Uri(meetingUrl);
+                                meeting.Date = boardMeeting.Start;
+                                meeting.BoardName = board.Name;
+                                meeting.Title = item.Tittel;
+                                meeting.Url = new Uri(meetingUrl);
 
-                            meetings.Add(meeting);
+                                meetings.Add(meeting);
+                            }
                         }
                     }
                 }

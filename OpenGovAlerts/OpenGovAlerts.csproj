@@ -32,6 +32,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="ClientApp\src\format.js" />
+    <None Remove="ClientApp\src\format.js" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\OpenGov\OpenGov.csproj" />
   </ItemGroup>
 

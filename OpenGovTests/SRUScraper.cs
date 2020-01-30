@@ -13,7 +13,7 @@ namespace OpenGovTests
         [TestMethod]
         public async Task FindNew()
         {
-            IScraper scraper = new OpenGov.Scrapers.SRU(new Uri("https://sru.randaberg.kommune.no"));
+            IScraper scraper = new OpenGov.Scrapers.SRU(new Uri("https://sru23.porsgrunn.kommune.no"));
 
             var meetings = await scraper.FindMeetings(null, new HashSet<string>());
 

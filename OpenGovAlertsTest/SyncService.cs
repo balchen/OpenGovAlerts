@@ -26,7 +26,7 @@ namespace OpenGovAlertsTests
 
             db.Observers.Add(slf);
 
-            var search = db.Searches.Add(new Search { Observer = slf, Name = "Sykkel", Phrase = "sykkel", Start = DateTime.UtcNow }).Entity;
+            var search = db.Searches.Add(new Search { CreatedBy = slf, Name = "Sykkel", Phrase = "sykkel", Start = DateTime.UtcNow }).Entity;
 
             search.Sources = new List<SearchSource>() { new SearchSource { Source = stavanger, Search = search }, new SearchSource { Source = sandnes, Search = search } };
 

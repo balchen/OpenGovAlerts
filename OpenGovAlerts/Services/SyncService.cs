@@ -67,7 +67,7 @@ namespace OpenGovAlerts.Services
 
         private async Task MatchSearches()
         {
-            foreach (Search search in await db.Searches.Include(s => s.Sources).Include(s => s.Observer).Include(s => s.SeenMeetings).ThenInclude(sm => sm.Meeting).ToListAsync().ConfigureAwait(false))
+            foreach (Search search in await db.Searches.Include(s => s.Sources).Include(s => s.CreatedBy).Include(s => s.SeenMeetings).ThenInclude(sm => sm.Meeting).ToListAsync().ConfigureAwait(false))
             {
                 foreach (Meeting meeting in await db.Meetings.Include(m => m.Documents).Where(m => (search.Sources.Count == 0 || search.Sources.Any(ss => ss.SourceId == m.Source.Id)) && !search.SeenMeetings.Any(sm => sm.MeetingId == m.Id)).ToListAsync().ConfigureAwait(false))
                 {
@@ -85,7 +85,13 @@ namespace OpenGovAlerts.Services
 
         private async Task NotifyObservers()
         {
-            foreach (var toNotify in await db.Matches.Include(m => m.Search).ThenInclude(s => s.Observer).Include(m => m.Meeting).ThenInclude(m => m.Source).Where(m => m.TimeNotified == null).GroupBy(m => m.Search.Observer).ToListAsync().ConfigureAwait(false))
+            foreach (var toNotify in await db.Matches
+                .Include(m => m.Search).ThenInclude(s => s.Subscribers).ThenInclude(s => s.Observer)
+                .Include(m => m.Meeting).ThenInclude(m => m.Source)
+                .Select(m => new { Match = m, Search = m.Search, Subscribers = m.Search.Subscribers })
+                .Where(m => m.Match.TimeNotified == null)
+                .GroupBy(m => m.Search.Subscribers)
+                .ToListAsync().ConfigureAwait(false))
             {
                 //await UploadToStorage(toNotify.Key, toNotify).ConfigureAwait(false);
                 //await AddToTaskManager(toNotify.Key, toNotify).ConfigureAwait(false);

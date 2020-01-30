@@ -13,7 +13,8 @@ namespace OpenGov.Models
         public int SmtpPort { get; set; }
         public bool SmtpUseSsl { get; set; }
 
-        public IList<Search> Searches { get; set; }
+        public IList<Search> CreatedSearches { get; set; }
+        public IList<ObserverSearch> SubscribedSearches { get; set; }
         public IList<TaskManagerConfig> TaskManager { get; set; }
         public IList<StorageConfig> Storage { get; set; }
     }

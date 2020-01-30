@@ -1,17 +1,121 @@
 {
+  "smtp": {
+    "sender": "nord-jaren@syklistene.no",
+    "password": "Hverdagssykling123",
+    "server": "mail.syklistene.no",
+    "port": 587
+  },
   "clients": [
     {
       "id": "stavanger",
       "openGovId": "STAVANGER",
-      "name": "Stavanger kommune"
+      "name": "Stavanger kommune",
+      "notifyEmail": "nord-jaren@syklistene.no"
     },
     {
       "id": "sandnes",
       "openGovId": "sandnes",
-      "name": "Sandnes kommune"
+      "name": "Sandnes kommune",
+      "notifyEmail": "nord-jaren@syklistene.no"
+    },
+    {
+      "id": "rfk",
+      "elementsUrl": "https://einnsyn.public.cloudservices.no/rfk-innsyn/dmb",
+      "name": "Rogaland fylkeskommune",
+      "notifyEmail": "nord-jaren@syklistene.no"
+    },
+    {
+      "id": "randaberg",
+      "SRUUrl": "https://sru.randaberg.kommune.no",
+      "name": "Randaberg kommune",
+      "notifyEmail": "nord-jaren@syklistene.no"
+    },
+    {
+      "id": "sola",
+      "acosUrl": "http://nyttinnsyn.sola.kommune.no/wfinnsyn.ashx",
+      "name": "Sola kommune",
+      "notifyEmail": "nord-jaren@syklistene.no"
+    },
+    {
+      "id": "strand",
+      "acosUrl": "https://innsyn.onacos.no/strand/wfinnsyn.ashx",
+      "name": "Strand kommune",
+      "notifyEmail": "nord-jaren@syklistene.no"
+    },
+    {
+      "id": "gjesdal",
+      "acosUrl": "https://www.gjesdal.kommune.no/innsyn.aspx",
+      "name": "Gjesdal kommune",
+      "notifyEmail": "nord-jaren@syklistene.no"
+    },
+    {
+      "id": "lillestrom",
+      "openGovId": "LILLESTROMKOM",
+      "name": "Lillestrøm kommune",
+      "notifyEmail": "lillestrom@syklistene.no"
+    },
+    {
+      "id": "ralingen",
+      "elementsUrl": "http://innsyn.ralingen.kommune.no/eInnsynRAL/dmb",
+      "name": "Rælingen kommune",
+      "notifyEmail": "lillestrom@syklistene.no"
     }
   ],
   "searches": [
+    {
+      "clientId": "*",
+      "phrase": "sykkel",
+      "name": "Sykkel",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "*",
+      "phrase": "g/s",
+      "name": "Gang- og sykkelvei",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "*",
+      "phrase": "ersv",
+      "name": "Enveisregulert sykkelvei",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "*",
+      "phrase": "gate",
+      "name": "Gate",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "*",
+      "phrase": "gata",
+      "name": "Gata",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "*",
+      "phrase": "veg",
+      "name": "Veg",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "*",
+      "phrase": "vei",
+      "name": "Vei",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "*",
+      "phrase": "byvekst",
+      "name": "Byvekst",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "øyanerut",
+      "name": "Sykkelløsning for Øyaneruta",
+      "issueUrl": "https://trello.com/c/nNnWvGdW/5-sykkell%C3%B8sning-for-%C3%B8yaneruta"
+    },
     {
       "clientId": "stavanger",
       "phrase": "2551",
@@ -49,8 +153,20 @@
       "issueUrl": "https://trello.com/c/METQ4ku9/2-plan-2016102-detaljregulering-av-bussvei-fra-kvadrat-til-sandnes-sentrum"
     },
     {
+      "clientId": "sandnes",
+      "phrase": "2016101",
+      "name": "Plan 2016101 - E-39 Ålgård - Hove",
+      "issueUrl": "https://trello.com/c/ldhRPkde/27-plan-2016101-e-39-%C3%A5lg%C3%A5rd-hove"
+    },
+    {
       "clientId": "stavanger",
       "phrase": "2619",
+      "name": "Plan 2619, Åsen næringsområde",
+      "issueUrl": "https://trello.com/c/w8bN0iiy/70-plan-2619-%C3%A5sen-n%C3%A6ringsomr%C3%A5de"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "Åsen næringsområde",
       "name": "Plan 2619, Åsen næringsområde",
       "issueUrl": "https://trello.com/c/w8bN0iiy/70-plan-2619-%C3%A5sen-n%C3%A6ringsomr%C3%A5de"
     },
@@ -83,6 +199,252 @@
       "phrase": "2505",
       "name": "Plan 2505 - Begrenset høring Hjalmar Johansens gt.",
       "issueUrl": "https://trello.com/c/SNAZwOqj/24-plan-2505-begrenset-h%C3%B8ring-hjalmar-johansens-gt"
+    },
+    {
+      "clientId": "sandnes",
+      "phrase": "2009104",
+      "name": "Plan 2009104 Endret regulering for Løwenstrasse på strekningen Vassbotn - Forussletta - gnr 67 og 69",
+      "issueUrl": "https://trello.com/c/cnAwPfqT/53-plan-2009104-endret-regulering-for-l%C3%B8wenstrasse-p%C3%A5-strekningen-vassbotn-forussletta-gnr-67-og-69"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2579P",
+      "name": "Plan 2579P Tvedtkvartalet",
+      "issueUrl": "https://trello.com/c/SvzsOpv4/71-plan-2579p-tvedtkvartalet"
+    },
+    {
+      "clientId": "sandnes",
+      "phrase": "201708",
+      "name": "Plan 201708 Detaljregulering av FV 509 Oalsgata",
+      "issueUrl": "https://trello.com/c/R35lYUrG/19-plan-201708-detaljregulering-av-fv-509-oalsgata"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2625",
+      "name": "Plan 2625 Nytt sykehus",
+      "issueUrl": "https://trello.com/c/Y5EuFpuP/37-plan-2625-nytt-sykehus"
+    },
+    {
+      "clientId": "sandnes",
+      "phrase": "2015108",
+      "name": "Plan 2015108 - Detaljregulering for sykkelstamveg fra Smeaheia til Oalsgata",
+      "issueUrl": "https://trello.com/c/axHY0bcD/18-plan-2015108-detaljregulering-for-sykkelstamveg-fra-smeaheia-til-oalsgata"
+    },
+    {
+      "clientId": "sandnes",
+      "phrase": "2016127",
+      "name": "Plan 2016127 - Detaljregulering for Bussveien Sandnes sentrum til Vatnekrossen",
+      "issueUrl": "https://trello.com/c/PFDoGckS/82-plan-2016127-detaljregulering-for-bussveien-sandnes-sentrum-til-vatnekrossen"
+    },
+    {
+      "clientId": "rfk",
+      "phrase": "regionalplan for jæren",
+      "name": "Regionalplan for Jæren",
+      "issueUrl": "https://trello.com/c/PeUa1QjF/48-regionalplan-for-j%C3%A6ren"
+    },
+    {
+      "clientId": "rfk",
+      "phrase": "bussanbud ryfylke sør",
+      "name": "Bussanbud Ryfylke Sør",
+      "issueUrl": "https://trello.com/c/3wFI3P8m/59-bussanbud-ryfylke-s%C3%B8r"
+    },
+    {
+      "clientId": "randaberg",
+      "phrase": "2018001",
+      "name": "Plan 2018001 - detaljregulering for sykkeltiltak langs fv. 480 Randabergveien, fra Vistnesveien til kommunegrensen med Stavanger",
+      "issueUrl": "https://trello.com/c/9QTmNni5/81-plan-2018001-detaljregulering-for-sykkeltiltak-langs-fv-480-randabergveien-fra-vistnesveien-til-kommunegrensen-med-stavanger"
+    },
+    {
+      "clientId": "randaberg",
+      "phrase": "kommuneplan",
+      "name": "Kommuneplan for Randaberg kommune",
+      "issueUrl": "https://trello.com/c/1EI45Yux/75-kommuneplan-for-randaberg-kommune"
+    },
+    {
+      "clientId": "randaberg",
+      "phrase": "2014003",
+      "name": "2014003 - Randaberg: Fv 409 Transportkorridor Vest",
+      "issueUrl": "https://trello.com/c/6fPPwBYB/30-2014003-randaberg-fv-409-transportkorridor-vest"
+    },
+    {
+      "clientId": "randaberg",
+      "phrase": "2015003",
+      "name": "2015003 - Randaberg: Gang- og sykkelløsning fra Goadalen til Goaveien",
+      "issueUrl": "https://trello.com/c/CiUi6xQg/29-2015003-randaberg-gang-og-sykkell%C3%B8sning-fra-goadalen-til-goaveien"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2691",
+      "name": "Plan 2691 - Detaljregulering for Sørmarka idrettspark - Hillevåg bydel",
+      "issueUrl": "https://trello.com/c/HhQMygbU/84-plan-2691-detaljregulering-for-s%C3%B8rmarka-idrettspark-hillev%C3%A5g-bydel"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0604",
+      "name": "Plan 0604 - Adkomstvei til nytt driftsområde, Stavanger lufthavn Sola",
+      "issueUrl": "https://trello.com/c/xoLu7Cjg/83-plan-0604-adkomstvei-til-nytt-driftsomr%C3%A5de-stavanger-lufthavn-sola"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0594",
+      "name": "Plan 0594 - Bussvei Forus Nord",
+      "issueUrl": "https://trello.com/c/WnRoYFQJ/90-bussvei-forus-nord"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0361",
+      "name": "Plan 0361 - Bussvei Forus Nord",
+      "issueUrl": "https://trello.com/c/WnRoYFQJ/90-bussvei-forus-nord"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2671",
+      "name": "Plan 2671 - Bussvei Forus Nord",
+      "issueUrl": "https://trello.com/c/WnRoYFQJ/90-bussvei-forus-nord"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0536",
+      "name": "Plan 0536 - Gang- og sykkelveg langs fv. 379 Vigdelsvegen, fv. 380 Ølberg havneveg og fv. 380 Ølbergvegen",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0576",
+      "name": "Plan 0576 - Somaleiren nordre del",
+      "issueUrl": "https://trello.com/c/lzLnOETf/95-plan-0576-somaleiren-nordre-del"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0590",
+      "name": "Plan 0590 - Ny vannledning vest",
+      "issueUrl": "https://trello.com/c/PmHuFoxa/128-ny-hovedvannledning-vest"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0542",
+      "name": "Plan 0542 Bussvei langs Åsenvegen via Skadberg til Sola sentrum",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0579",
+      "name": "Plan 0579 Bussvei fra Sola sentrum til Stavanger lufthavn",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0580",
+      "name": "Plan 0580 Sandesletta sør",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "gjesdal",
+      "phrase": "201601",
+      "name": "Plan 201601 E-39 Ålgård - Hove",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2669",
+      "name": "Plan 2669 Krossbergveien trelast",
+      "issueUrl": "https://trello.com/c/PDdBpVgX/134-plan-2669-krossbergveien-trelast"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2663",
+      "name": "Plan 2663 Forusbeen 35",
+      "issueUrl": "https://trello.com/c/TKNruF4h/141-plan-2663-forusbeen-35"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0330",
+      "name": "Endring av plan 0330 og 0419",
+      "issueUrl": "https://trello.com/c/484DtIKe/126-endring-av-plan-0330-og-0419"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0419",
+      "name": "Endring av plan 0330 og 0419",
+      "issueUrl": "https://trello.com/c/484DtIKe/126-endring-av-plan-0330-og-0419"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "Lars Hertervigs",
+      "name": "Sykkeltilrettelegging i Lars Hertervigs gate",
+      "issueUrl": "https://trello.com/c/a77Mg2Oy/136-sykkeltilrettelegging-i-lars-hertervigs-gate"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "Nesbuveien",
+      "name": "Fv. 510 Nesbuveien, to underganger",
+      "issueUrl": "https://trello.com/c/QIM7J5mO/124-fv-510-nesbuveien-to-underganger"
+    },
+    {
+      "clientId": "sola",
+      "phrase": "0595",
+      "name": "Plan 0595 - Adkomstveg til nytt sykehus",
+      "issueUrl": "https://trello.com/c/3QjWt1F2/125-plan-0595-adkomstveg-til-nytt-sykehus"
+    },
+    {
+      "clientId": "sandnes",
+      "phrase": "Tverrforbindelsen",
+      "name": "Tverrforbindelsen fv. 505 Foss-Eikeland – E39 Bråstein",
+      "issueUrl": "https://trello.com/c/5qMmCw47/91-plan-2008122-fv-505-skj%C3%A6veland-foss-eikeland"
+    },
+    {
+      "clientId": "sandnes",
+      "phrase": "2014144",
+      "name": "Plan 2014144 - Detaljregulering for FV44 på strekningen Kryss FV 242 Brunesveien til kryss FV 325 Jærveien",
+      "issueUrl": "https://trello.com/c/SAzY3t6p/116-plan-2014144-detaljregulering-for-fv44-p%C3%A5-strekningen-kryss-fv-242-brunesveien-til-kryss-fv-325-j%C3%A6rveien"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2606",
+      "name": "Plan 2606 Bussveien Stasjonsveien-Gauselvågen",
+      "issueUrl": "https://trello.com/c/pBpuScsN/85-plan-20606-fv-44-bussveien-stasjonsveien-gauselv%C3%A5gen"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "1068E",
+      "name": "Plan 1139E og 1068E - planendring - trafikksikring ved Våland skole",
+      "issueUrl": "https://trello.com/c/pBpuScsN/85-plan-20606-fv-44-bussveien-stasjonsveien-gauselv%C3%A5gen"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "1139E",
+      "name": "Plan 1139E og 1068E - planendring - trafikksikring ved Våland skole",
+      "issueUrl": "https://trello.com/c/pBpuScsN/85-plan-20606-fv-44-bussveien-stasjonsveien-gauselv%C3%A5gen"
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "Trafikksikkerhetsplan",
+      "name": "Trafikksikkerhetsplan Stavanger 2020-2023",
+      "issueUrl": "https://trello.com/c/vMybQhwU/131-trafikksikkerhetsplan-stavanger-2020-2023"
+    },
+    {
+      "clientId": "*",
+      "phrase": "bussvei",
+      "name": "Bussveien",
+      "issueUrl": ""
+    },
+    {
+      "clientId": "stavanger",
+      "phrase": "2714",
+      "name": "Plan 2714 - Detaljregulering for Ytre Eiganesveien - Rektor Berntsens gate",
+      "issueUrl": "https://trello.com/c/DT1ZlquX/140-plan-2714-detaljregulering-for-ytre-eiganesveien-rektor-berntsens-gate"
+    },
+    {
+      "clientId": "strand",
+      "phrase": "ugeli",
+      "name": "Plan 1130201902 detaljplan for Ugeli",
+      "issueUrl": "https://trello.com/c/0owpaCzJ/132-plan-1130201902-detaljplan-for-ugeli"
+    }
+    {
+      "clientId": "stavanger",
+      "phrase": "2666",
+      "name": "Plan 2666 Madla-Revheim delfelt B1",
+      "issueUrl": "https://trello.com/c/duMemuaP/153-plan-2666-madla-revheim-delfelt-b1"
     }
   ]
 }

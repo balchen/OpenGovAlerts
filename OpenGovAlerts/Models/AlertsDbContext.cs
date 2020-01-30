@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using OpenGov.Models;
 using System;
 
@@ -16,6 +15,7 @@ namespace OpenGovAlerts.Models
         public DbSet<Source> Sources { get; set; }
         public DbSet<Observer> Observers { get; set; }
         public DbSet<Search> Searches { get; set; }
+        public DbSet<ObserverSearch> ObserverSearches { get; set; }
         public DbSet<SearchSource> SearchSources { get; set; }
         public DbSet<SeenMeeting> SeenMeetings { get; set; }
         public DbSet<Match> Matches { get; set; }
@@ -38,8 +38,16 @@ namespace OpenGovAlerts.Models
                 .WithOne(d => d.Meeting);
 
             modelBuilder.Entity<Observer>()
-                .HasMany(o => o.Searches)
+                .HasMany(o => o.CreatedSearches)
+                .WithOne(s => s.CreatedBy);
+
+            modelBuilder.Entity<Observer>()
+                .HasMany(o => o.SubscribedSearches)
                 .WithOne(s => s.Observer);
+
+            modelBuilder.Entity<Search>()
+                .HasMany(s => s.Subscribers)
+                .WithOne(s => s.Search);
 
             modelBuilder.Entity<Observer>()
                 .Property(o => o.Emails)
@@ -47,6 +55,9 @@ namespace OpenGovAlerts.Models
                 .HasConversion(
                     e => string.Join(',', e),
                     e => e.Split(',', StringSplitOptions.RemoveEmptyEntries));
+
+            modelBuilder.Entity<ObserverSearch>()
+                .HasKey(s => new { s.ObserverId, s.SearchId });
 
             modelBuilder.Entity<SearchSource>()
                 .HasKey(s => new { s.SearchId, s.SourceId });
