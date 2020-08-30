@@ -47,7 +47,8 @@ namespace OpenGovAlerts
 
             foreach (Search search in config.Searches)
             {
-                var clients = config.Clients.Where(c => search.ClientId == "*" || c.Id == search.ClientId);
+                var clientIds = search.ClientId.Split(',');
+                var clients = config.Clients.Where(c => search.ClientId == "*" || c.Id == search.ClientId || clientIds.Contains(c.Id));
 
                 if (!clients.Any())
                 {
