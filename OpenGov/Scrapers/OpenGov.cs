@@ -113,45 +113,27 @@ namespace OpenGov.Scrapers
 
         private async Task<List<Meeting>> FindByPhrase(string phrase, ISet<string> seenMeetings, HttpClient http)
         {
-            Uri url = new Uri(string.Format("http://opengov.cloudapp.net/Meetings/{0}/AgendaItems/Search?q={1}", clientId, phrase));
+            List<Meeting> foundMeetings = new List<Meeting>();
 
-            string html = await http.GetStringAsync(url);
-
-            HtmlDocument doc = new HtmlDocument();
-            doc.LoadHtml(html);
-
-            List<Meeting> newMeetings = new List<Meeting>();
-
-            var meetings = doc.DocumentNode.SelectNodes("//div[@class='meetingList searchResultsList']/ul/li/a");
-
-            if (meetings != null)
+            foreach (Meeting newMeeting in await FindNew(seenMeetings, http))
             {
-                foreach (var meeting in meetings)
+                if (newMeeting.Title.ToLower().Contains(phrase))
                 {
-                    var meetingUrl = meeting.Attributes["href"].Value;
-                    Uri meetingUri = new Uri(url, meetingUrl);
-                    meetingUrl = meetingUri.ToString();
+                    foundMeetings.Add(newMeeting);
+                    continue;
+                }
 
-                    if (seenMeetings.Contains(meetingUrl))
-                        continue;
-
-                    string name = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingName']/span").InnerText).Trim();
-                    DateTime date = DateTime.ParseExact(HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText), "dd.MM.yyyy", CultureInfo.CurrentCulture);
-                    string topic = HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='serachMeetingResult']/p").InnerText).Trim();
-                    string agendaItemId = HttpUtility.ParseQueryString(meetingUri.Query).Get("agendaItemId").Trim();
-
-                    newMeetings.Add(new Meeting
+                foreach (Document document in await GetDocuments(newMeeting))
+                {
+                    if (document.Title.ToLower().Contains(phrase))
                     {
-                        BoardName = name,
-                        Title = topic,
-                        Url = meetingUri,
-                        Date = date,
-                        AgendaItemId = agendaItemId
-                    });
+                        foundMeetings.Add(newMeeting);
+                        break;
+                    }
                 }
             }
 
-            return newMeetings;
+            return foundMeetings;
         }
 
         public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
