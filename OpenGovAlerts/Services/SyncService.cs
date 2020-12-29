@@ -42,24 +42,30 @@ namespace OpenGovAlerts.Services
         {
             foreach (Source source in await db.Sources.ToListAsync().ConfigureAwait(false))
             {
-                ISet<string> seenMeetings = new HashSet<string>(await db.Meetings.Where(m => m.Source == source).Select(m => m.Url.ToString()).ToListAsync().ConfigureAwait(false));
+                ISet<string> seenAgendaItems = new HashSet<string>(await db.AgendaItems.Include(a => a.Meeting).Where(a => a.Meeting.Source == source).Select(a => a.Url.ToString()).ToListAsync().ConfigureAwait(false));
                 IScraper scraper = CreateScraper(source.Url);
 
-                IEnumerable<Meeting> meetings = await scraper.FindMeetings(null, seenMeetings).ConfigureAwait(false);
+                IEnumerable<Meeting> meetings = await scraper.GetNewMeetings(seenAgendaItems).ConfigureAwait(false);
 
                 foreach (Meeting meeting in meetings)
                 {
                     meeting.Source = source;
                     await db.Meetings.AddAsync(meeting).ConfigureAwait(false);
 
-                    IEnumerable<Document> documents = await scraper.GetDocuments(meeting).ConfigureAwait(false);
-
-                    foreach (Document document in documents)
+                    foreach (AgendaItem item in meeting.AgendaItems)
                     {
-                        document.Meeting = meeting;
-                        await GetText(document).ConfigureAwait(false);
-                        await db.Documents.AddAsync(document).ConfigureAwait(false);
-                        await db.SaveChangesAsync().ConfigureAwait(false);
+                        item.Meeting = meeting;
+                        await db.AgendaItems.AddAsync(item).ConfigureAwait(false);
+
+                        IEnumerable<Document> documents = await scraper.GetDocuments(item).ConfigureAwait(false);
+
+                        foreach (Document document in documents)
+                        {
+                            document.AgendaItem = item;
+                            await GetText(document).ConfigureAwait(false);
+                            await db.Documents.AddAsync(document).ConfigureAwait(false);
+                            await db.SaveChangesAsync().ConfigureAwait(false);
+                        }
                     }
                 }
             }
@@ -67,15 +73,18 @@ namespace OpenGovAlerts.Services
 
         private async Task MatchSearches()
         {
-            foreach (Search search in await db.Searches.Include(s => s.Sources).Include(s => s.CreatedBy).Include(s => s.SeenMeetings).ThenInclude(sm => sm.Meeting).ToListAsync().ConfigureAwait(false))
+            foreach (Search search in await db.Searches.Include(s => s.Sources).Include(s => s.CreatedBy).Include(s => s.SeenAgendaItems).ThenInclude(sm => sm.AgendaItem).ToListAsync().ConfigureAwait(false))
             {
-                foreach (Meeting meeting in await db.Meetings.Include(m => m.Documents).Where(m => (search.Sources.Count == 0 || search.Sources.Any(ss => ss.SourceId == m.Source.Id)) && !search.SeenMeetings.Any(sm => sm.MeetingId == m.Id)).ToListAsync().ConfigureAwait(false))
+                foreach (Meeting meeting in await db.Meetings.Include(m => m.AgendaItems).ThenInclude(a => a.Documents).Where(m => (search.Sources.Count == 0 || search.Sources.Any(ss => ss.SourceId == m.Source.Id)) && !search.SeenAgendaItems.Any(sm => sm.AgendaItemId == m.Id)).ToListAsync().ConfigureAwait(false))
                 {
-                    await db.SeenMeetings.AddAsync(new SeenMeeting { Meeting = meeting, Search = search, DateSeen = DateTime.UtcNow }).ConfigureAwait(false);
-
-                    if (Match(search, meeting))
+                    foreach (AgendaItem item in meeting.AgendaItems)
                     {
-                        await db.Matches.AddAsync(new Match { Meeting = meeting, Search = search, TimeFound = DateTime.UtcNow }).ConfigureAwait(false);
+                        await db.SeenAgendaItems.AddAsync(new SeenAgendaItem { AgendaItem = item, Search = search, DateSeen = DateTime.UtcNow }).ConfigureAwait(false);
+
+                        if (Match(search, item))
+                        {
+                            await db.Matches.AddAsync(new Match { AgendaItem = item, Search = search, TimeFound = DateTime.UtcNow }).ConfigureAwait(false);
+                        }
                     }
                 }
             }
@@ -87,7 +96,7 @@ namespace OpenGovAlerts.Services
         {
             foreach (var toNotify in await db.Matches
                 .Include(m => m.Search).ThenInclude(s => s.Subscribers).ThenInclude(s => s.Observer)
-                .Include(m => m.Meeting).ThenInclude(m => m.Source)
+                .Include(m => m.AgendaItem).ThenInclude(a => a.Meeting).ThenInclude(m => m.Source)
                 .SelectMany(m => m.Search.Subscribers.Select(s => new { Match = m, Search = m.Search, Subscriber = s.Observer }))
                 .Where(m => m.Match.TimeNotified == null)
                 .GroupBy(m => m.Subscriber)
@@ -122,21 +131,21 @@ namespace OpenGovAlerts.Services
 
                 foreach (Match match in matches)
                 {
-                    foreach (Document document in match.Meeting.Documents)
+                    foreach (Document document in match.AgendaItem.Documents)
                     {
-                        string path = Path.Combine(match.Meeting.Source.Name, match.Search.Name, match.Meeting.Date.ToString("yyyy-MM-dd") + "-" + match.Meeting.BoardName);
-                        Uri documentUrl = await storageProvider.AddDocument(match.Meeting, document, path).ConfigureAwait(false);
+                        string path = Path.Combine(match.AgendaItem.Meeting.Source.Name, match.Search.Name, match.AgendaItem.Meeting.Date.ToString("yyyy-MM-dd") + "-" + match.AgendaItem.Meeting.BoardName);
+                        Uri documentUrl = await storageProvider.AddDocument(match.AgendaItem, document, path).ConfigureAwait(false);
                     }
                 }
             }
         }
 
-        private bool Match(Search search, Meeting meeting)
+        private bool Match(Search search, AgendaItem item)
         {
-            if (meeting.Title.Contains(search.Phrase, StringComparison.CurrentCultureIgnoreCase))
+            if (item.Title.Contains(search.Phrase, StringComparison.CurrentCultureIgnoreCase))
                 return true;
 
-            foreach (Document document in meeting.Documents)
+            foreach (Document document in item.Documents)
             {
                 if (document.Text != null && document.Text.Contains(search.Phrase, StringComparison.CurrentCultureIgnoreCase))
                     return true;

@@ -17,12 +17,12 @@ namespace OpenGov.Storage
             this.basePath = basePath;
         }
 
-        public async Task<Uri> AddDocument(Meeting meeting, Document document, string path = "")
+        public async Task<Uri> AddDocument(AgendaItem item, Document document, string path = "")
         {
             HttpClient http = new HttpClient();
 
             if (string.IsNullOrEmpty(path))
-                path = Path.Combine(basePath, meeting.Source.Name, meeting.BoardName, meeting.Date.ToString("yyyy-MM-dd"));
+                path = Path.Combine(basePath, item.Meeting.Source.Name, item.Meeting.BoardName, item.Meeting.Date.ToString("yyyy-MM-dd"));
 
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);

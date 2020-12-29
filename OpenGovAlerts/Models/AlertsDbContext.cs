@@ -11,13 +11,14 @@ namespace OpenGovAlerts.Models
         { }
 
         public DbSet<Document> Documents { get; set; }
+        public DbSet<AgendaItem> AgendaItems { get; set; }
         public DbSet<Meeting> Meetings { get; set; }
         public DbSet<Source> Sources { get; set; }
         public DbSet<Observer> Observers { get; set; }
         public DbSet<Search> Searches { get; set; }
         public DbSet<ObserverSearch> ObserverSearches { get; set; }
         public DbSet<SearchSource> SearchSources { get; set; }
-        public DbSet<SeenMeeting> SeenMeetings { get; set; }
+        public DbSet<SeenAgendaItem> SeenAgendaItems { get; set; }
         public DbSet<Match> Matches { get; set; }
 
         public async virtual void UpdateSchema()
@@ -34,8 +35,12 @@ namespace OpenGovAlerts.Models
                 .WithOne(m => m.Source);
 
             modelBuilder.Entity<Meeting>()
+                .HasMany(m => m.AgendaItems)
+                .WithOne(a => a.Meeting);
+
+            modelBuilder.Entity<AgendaItem>()
                 .HasMany(m => m.Documents)
-                .WithOne(d => d.Meeting);
+                .WithOne(d => d.AgendaItem);
 
             modelBuilder.Entity<Observer>()
                 .HasMany(o => o.CreatedSearches)
@@ -62,15 +67,15 @@ namespace OpenGovAlerts.Models
             modelBuilder.Entity<SearchSource>()
                 .HasKey(s => new { s.SearchId, s.SourceId });
 
-            modelBuilder.Entity<SeenMeeting>()
-                .HasKey(m => new { m.SearchId, m.MeetingId });
+            modelBuilder.Entity<SeenAgendaItem>()
+                .HasKey(m => new { m.SearchId, m.AgendaItemId });
 
             modelBuilder.Entity<Search>()
                 .HasMany(s => s.Sources)
                 .WithOne(s => s.Search);
 
             modelBuilder.Entity<Search>()
-                .HasMany(s => s.SeenMeetings)
+                .HasMany(s => s.SeenAgendaItems)
                 .WithOne(m => m.Search);
 
             modelBuilder.Entity<Search>()
@@ -81,16 +86,20 @@ namespace OpenGovAlerts.Models
                 .HasMany(s => s.Sources)
                 .WithOne(s => s.Search);
 
-            modelBuilder.Entity<Meeting>()
-                .HasMany(m => m.Matches)
-                .WithOne(m => m.Meeting);
+            modelBuilder.Entity<AgendaItem>()
+                .HasMany(a => a.Matches)
+                .WithOne(m => m.AgendaItem);
 
             modelBuilder.Entity<Meeting>()
                 .Property(m => m.Url)
                 .HasConversion(v => v.ToString(), v => new Uri(v));
 
-            modelBuilder.Entity<Meeting>()
-                .Ignore(m => m.DocumentsUrl);
+            modelBuilder.Entity<AgendaItem>()
+                .Property(a => a.Url)
+                .HasConversion(v => v.ToString(), v => new Uri(v));
+
+            modelBuilder.Entity<AgendaItem>()
+                .Ignore(a => a.DocumentsUrl);
 
             modelBuilder.Entity<Document>()
                 .Property(d => d.Url)

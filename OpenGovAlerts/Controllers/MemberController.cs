@@ -27,7 +27,7 @@ namespace OpenGovAlerts.Controllers
             result.Observers = await db.Observers.Include(o => o.CreatedSearches).ToListAsync();
             result.RecentMatches = await db.Matches
                 .Include(m => m.Search).ThenInclude(s => s.CreatedBy)
-                .Include(m => m.Meeting).ThenInclude(m => m.Source)
+                .Include(m => m.AgendaItem).ThenInclude(a => a.Meeting).ThenInclude(m => m.Source)
                 .Where(m => m.TimeFound > DateTime.UtcNow.Subtract(TimeSpan.FromDays(7)) && result.Observers.Contains(m.Search.CreatedBy))
                 .Take(10)
                 .ToListAsync();
@@ -61,9 +61,9 @@ namespace OpenGovAlerts.Controllers
 
             result.RecentMatches = await db.Matches
                 .Include(m => m.Search)
-                .Include(m => m.Meeting).ThenInclude(m => m.Source)
+                .Include(m => m.AgendaItem).ThenInclude(a => a.Meeting).ThenInclude(m => m.Source)
                 .Where(m => m.TimeFound > DateTime.UtcNow.Subtract(TimeSpan.FromDays(7)) && m.Search.Id == id)
-                .OrderByDescending(m => m.Meeting.Date)
+                .OrderByDescending(m => m.AgendaItem.Meeting.Date)
                 .Take(10)
                 .ToListAsync();
 
@@ -80,7 +80,7 @@ namespace OpenGovAlerts.Controllers
 
             result.Matches = await db.Matches
                 .Include(m => m.Search)
-                .Include(m => m.Meeting).ThenInclude(m => m.Source)
+                .Include(m => m.AgendaItem).ThenInclude(a => a.Meeting).ThenInclude(m => m.Source)
                 .Where(m => m.Search.Id == searchId)
                 .ToListAsync();
 

@@ -33,16 +33,16 @@ namespace OpenGov.Notifiers
                 foreach (Match match in groupedSearch)
                 {
                     var xmlMatch = xmlSearch.AppendChild(source.CreateElement("meeting")) as XmlElement;
-                    xmlMatch.SetAttribute("id", match.Meeting.Id.ToString());
-                    xmlMatch.SetAttribute("meetingId", match.Meeting.MeetingId.ToString());
-                    xmlMatch.AppendChild(source.CreateElement("title")).InnerText = match.Meeting.Title;
-                    xmlMatch.AppendChild(source.CreateElement("url")).InnerText = match.Meeting.Url.ToString();
-                    xmlMatch.AppendChild(source.CreateElement("date")).InnerText = match.Meeting.Date.ToString();
-                    xmlMatch.AppendChild(source.CreateElement("boardName")).InnerText = match.Meeting.BoardName;
+                    xmlMatch.SetAttribute("id", match.AgendaItem.Id.ToString());
+                    xmlMatch.SetAttribute("meetingId", match.AgendaItem.ExternalId.ToString());
+                    xmlMatch.AppendChild(source.CreateElement("title")).InnerText = match.AgendaItem.Title;
+                    xmlMatch.AppendChild(source.CreateElement("url")).InnerText = match.AgendaItem.Url.ToString();
+                    xmlMatch.AppendChild(source.CreateElement("date")).InnerText = match.AgendaItem.Meeting.Date.ToString();
+                    xmlMatch.AppendChild(source.CreateElement("boardName")).InnerText = match.AgendaItem.Meeting.BoardName;
 
                     var xmlSource = xmlMatch.AppendChild(source.CreateElement("source")) as XmlElement;
-                    xmlSource.SetAttribute("id", match.Meeting.Source.Id.ToString());
-                    xmlSource.AppendChild(source.CreateElement("name")).InnerText = match.Meeting.Source.Name;
+                    xmlSource.SetAttribute("id", match.AgendaItem.Meeting.Source.Id.ToString());
+                    xmlSource.AppendChild(source.CreateElement("name")).InnerText = match.AgendaItem.Meeting.Source.Name;
                 }
             }
 

@@ -12,13 +12,13 @@ namespace OpenGov.Scrapers
     public class Elements : IScraper
     {
         public Uri baseUrl;
-        
+
         public Elements(Uri baseUrl)
         {
             this.baseUrl = baseUrl;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
         {
             HttpClient http = new HttpClient();
             string html = await http.GetStringAsync(baseUrl);
@@ -42,14 +42,14 @@ namespace OpenGov.Scrapers
                 if (seenMeetings.Contains(meetingUrl.ToString()))
                     continue;
 
-                var meetings = await GetMeetings(phrase, http, meetingUrl);
-                newMeetings.AddRange(meetings);
+                var meeting = await GetMeeting(http, meetingUrl);
+                newMeetings.Add(meeting);
             }
 
             return newMeetings;
         }
 
-        private async Task<IEnumerable<Meeting>> GetMeetings(string phrase, HttpClient http, Uri url)
+        private async Task<Meeting> GetMeeting(HttpClient http, Uri url)
         {
             string html = await http.GetStringAsync(url);
 
@@ -61,10 +61,13 @@ namespace OpenGov.Scrapers
             if (meetingTable == null)
                 throw new ArgumentException("No innsynListTables found at " + url.ToString());
 
+            string meetingId = HttpUtility.ParseQueryString(url.Query).Get("MeetingId");
             DateTime date = DateTime.ParseExact(meetingTable.SelectSingleNode("descendant::td[@headers='utvDate']/span").InnerText.Trim(), "yyyyMMdd", CultureInfo.CurrentCulture);
             string boardName = meetingTable.SelectSingleNode("descendant::td[@headers='DmbName']").InnerText;
 
-            List<Meeting> meetings = new List<Meeting>();
+            var meeting = new Meeting { Date = date, BoardName = boardName, ExternalId = meetingId, Url = url };
+
+            List<AgendaItem> items = new List<AgendaItem>();
 
             var caseTable = doc.DocumentNode.SelectSingleNode("//table[@id='innsynListTableSakskart']");
 
@@ -84,30 +87,27 @@ namespace OpenGov.Scrapers
                     var docsLink = caseRow.SelectSingleNode("descendant::td[@headers='utvCasesTypeJPDetaljer']/a[@class='registryentry-link']");
                     Uri docsUrl = docsLink == null ? null : new Uri(url, HttpUtility.HtmlDecode(docsLink.Attributes["href"].Value));
 
-                    if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase.ToLower()))
-                    {
-                        Meeting meeting = new Meeting();
-                        meeting.Title = title;
-                        meeting.Url = url;
-                        meeting.BoardName = boardName;
-                        meeting.Date = date;
-                        meeting.DocumentsUrl = docsUrl;
+                    AgendaItem item = new AgendaItem();
+                    item.Title = title;
+                    item.Url = url;
+                    item.DocumentsUrl = docsUrl;
 
-                        meetings.Add(meeting);
-                    }
+                    items.Add(item);
                 }
             }
 
-            return meetings;
+            meeting.AgendaItems = items;
+
+            return meeting;
         }
 
-        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
+        public async Task<IEnumerable<Document>> GetDocuments(AgendaItem item)
         {
-            if (meeting.DocumentsUrl == null)
+            if (item.DocumentsUrl == null)
                 return new List<Document>();
 
             HttpClient http = new HttpClient();
-            string html = await http.GetStringAsync(meeting.DocumentsUrl);
+            string html = await http.GetStringAsync(item.DocumentsUrl);
 
             HtmlDocument doc = new HtmlDocument();
             doc.LoadHtml(html);
@@ -118,7 +118,7 @@ namespace OpenGov.Scrapers
             {
                 var docLinkNode = docNode.SelectSingleNode("descendant::a");
 
-                Uri docUrl = docLinkNode == null ? null : new Uri(meeting.DocumentsUrl, HttpUtility.HtmlDecode(docLinkNode.Attributes["href"].Value));
+                Uri docUrl = docLinkNode == null ? null : new Uri(item.DocumentsUrl, HttpUtility.HtmlDecode(docLinkNode.Attributes["href"].Value));
                 string title = HttpUtility.HtmlDecode(docNode.SelectSingleNode("descendant::td[@headers='jpDocumentDocumentDescriptionTitle']").InnerText.Trim());
 
                 documents.Add(new Document

@@ -14,7 +14,7 @@ namespace OpenGovTests
         {
             IScraper scraper = new OpenGov.Scrapers.OpenGov("STAVANGER");
 
-            var meetings = await scraper.FindMeetings(null, new HashSet<string>());
+            var meetings = await scraper.GetNewMeetings(new HashSet<string>());
 
             Assert.IsNotNull(meetings);
 
@@ -24,27 +24,7 @@ namespace OpenGovTests
 
             var meeting = meetingsList[0];
 
-            var documents = new List<Document>(await scraper.GetDocuments(meeting));
-
-            Assert.IsTrue(documents.Count > 0);
-        }
-
-        [TestMethod]
-        public async Task FindPhrase()
-        {
-            IScraper scraper = new OpenGov.Scrapers.OpenGov("STAVANGER");
-
-            var meetings = await scraper.FindMeetings("sykkel", new HashSet<string>());
-
-            Assert.IsNotNull(meetings);
-
-            var meetingsList = new List<Meeting>(meetings);
-
-            Assert.IsTrue(meetingsList.Count > 0);
-
-            var meeting = meetingsList[0];
-
-            var documents = new List<Document>(await scraper.GetDocuments(meeting));
+            var documents = new List<Document>(await scraper.GetDocuments(meeting.AgendaItems[0]));
 
             Assert.IsTrue(documents.Count > 0);
         }

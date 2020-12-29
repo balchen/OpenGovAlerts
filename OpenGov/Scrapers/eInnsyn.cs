@@ -25,7 +25,7 @@ namespace OpenGov.Scrapers
             this.baseQuery = baseQuery;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
         {
             Uri url = new Uri(baseUrl);
 
@@ -53,19 +53,21 @@ namespace OpenGov.Scrapers
                 if (searchMeeting.source.type[0] == "Moetemappe" && !seenMeetings.Contains(id))
                 {
                     await Task.Delay(10000);
-                    IEnumerable<Meeting> agendaItems = await GetAgendaItems(phrase, id, boardId, boardName, date);
-                    meetings.AddRange(agendaItems);
+                    Meeting meeting = new Meeting { ExternalId = id, BoardId = boardId, BoardName = boardName, Date = date };
+
+                    IList<AgendaItem> agendaItems = await GetAgendaItems(meeting);
+                    meetings.Add(meeting);
                 }
             }
 
             return meetings;
         }
 
-        private async Task<IEnumerable<Meeting>> GetAgendaItems(string phrase, string meetingId, string boardId, string boardName, DateTime date)
+        private async Task<IList<AgendaItem>> GetAgendaItems(Meeting meeting)
         {
-            Uri url = new Uri(string.Format(meetingUrl, meetingId));
+            Uri url = new Uri(string.Format(meetingUrl, meeting.ExternalId));
 
-            List<Meeting> agendaItems = new List<Meeting>();
+            List<AgendaItem> agendaItems = new List<AgendaItem>();
 
             string jsonResult = await http.GetStringAsync(url);
 
@@ -75,19 +77,17 @@ namespace OpenGov.Scrapers
             {
                 if ((string)item["@type"][0] == "http://www.arkivverket.no/standarder/noark5/arkivstruktur/Møtesaksregistrering")
                 {
+                    string agendaItemId = (string)item["@id"];
                     string title = (string)item["http://www.arkivverket.no/standarder/noark5/arkivstruktur/offentligTittel_SENSITIV"][0]["@value"];
 
-                    if (string.IsNullOrEmpty(phrase) || phrase == "*" || title.Contains(phrase))
-                    {
-                        agendaItems.Add(new Meeting { BoardId = boardId, BoardName = boardName, Date = date, Title = title, Url = new Uri(meetingId), MeetingId = meetingId, AgendaItemId = (string)item["@id"] });
-                    }
+                    agendaItems.Add(new AgendaItem { Title = title, Url = new Uri(url, "#" + agendaItemId), ExternalId = agendaItemId });
                 }
             }
 
             return agendaItems;
         }
 
-        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
+        public async Task<IEnumerable<Document>> GetDocuments(AgendaItem item)
         {
             return new List<Document>();
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
@@ -19,7 +20,7 @@ namespace OpenGov.Scrapers
             http = new HttpClient();
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenItems)
         {
             Uri calendarUrl = new Uri(url, "?response=moteplan");
 
@@ -58,13 +59,21 @@ namespace OpenGov.Scrapers
                                 int day = int.Parse(meetingCell);
                                 Uri meetingUrl = new Uri(calendarUrl, HttpUtility.HtmlDecode(meetingLink.Attributes["href"].Value));
                                 DateTime date = new DateTime(year, month, day);
+                                string meetingId = HttpUtility.ParseQueryString(meetingUrl.Query).Get("moteid");
 
-                                if (seenMeetings.Contains(meetingUrl.ToString()))
+                                if (seenItems.Contains(meetingUrl.ToString()))
                                     continue;
 
-                                var meeting = await FindMeeting(phrase, meetingUrl, date, boardName, boardId);
+                                Meeting meeting = new Meeting { ExternalId = meetingId, BoardId = boardId, BoardName = boardName, Date = date, Url = meetingUrl };
 
-                                if (meeting != null)
+                                var items = await GetAgendaItems(meetingUrl);
+
+                                foreach (var item in items)
+                                    item.Meeting = meeting;
+
+                                meeting.AgendaItems = items.Where(i => !seenItems.Contains(i.Url.ToString())).ToList();
+
+                                if (meeting != null && meeting.AgendaItems != null && meeting.AgendaItems.Count > 0)
                                     newMeetings.Add(meeting);
                             }
                         }
@@ -75,10 +84,8 @@ namespace OpenGov.Scrapers
             return newMeetings;
         }
 
-        private async Task<Meeting> FindMeeting(string phrase, Uri meetingUrl, DateTime date, string boardName, string boardId)
+        private async Task<IList<AgendaItem>> GetAgendaItems(Uri meetingUrl)
         {
-            string meetingId = HttpUtility.ParseQueryString(meetingUrl.Query).Get("moteid");
-
             HtmlDocument meetingDoc = new HtmlDocument();
 
             meetingDoc.LoadHtml(await http.GetStringAsync(meetingUrl));
@@ -87,6 +94,8 @@ namespace OpenGov.Scrapers
 
             if (agendaItemNodes == null)
                 return null;
+
+            List<AgendaItem> items = new List<AgendaItem>();
 
             foreach (var agendaItem in agendaItemNodes)
             {
@@ -104,29 +113,17 @@ namespace OpenGov.Scrapers
 
                 if (agendaItemId != null && title != null)
                 {
-                    if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase))
-                    {
-                        return new Meeting
-                        {
-                            Id = int.Parse(meetingId),
-                            AgendaItemId = agendaItemId,
-                            BoardId = boardId,
-                            BoardName = boardName,
-                            Date = date,
-                            Title = title.RemoveWhitespace(),
-                            MeetingId = meetingId,
-                            Url = meetingUrl
-                        };
-                    }
+                    Uri url = new Uri(meetingUrl, "#" + agendaItemId);
+                    items.Add(new AgendaItem { ExternalId = agendaItemId, Title = title, Url = url });
                 }
             }
 
-            return null;
+            return items;
         }
 
-        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
+        public async Task<IEnumerable<Document>> GetDocuments(AgendaItem item)
         {
-            string meetingUrl = url + "?response=mote&moteid=" + meeting.Id;
+            string meetingUrl = url + "?response=mote&moteid=" + item.Meeting.ExternalId;
 
             HtmlDocument meetingDoc = new HtmlDocument();
 
@@ -134,7 +131,7 @@ namespace OpenGov.Scrapers
 
             List<Document> documents = new List<Document>();
 
-            var agendaItem = meetingDoc.DocumentNode.SelectSingleNode("//div[@id='div_sok_resultstable']//li[//a[@id='" + meeting.AgendaItemId + "']]");
+            var agendaItem = meetingDoc.DocumentNode.SelectSingleNode("//div[@id='div_sok_resultstable']//li[//a[@id='" + item.ExternalId + "']]");
 
             foreach (var documentsHeading in agendaItem.SelectNodes("descendant::h3"))
             {

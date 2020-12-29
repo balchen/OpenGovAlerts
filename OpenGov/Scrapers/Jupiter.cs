@@ -5,10 +5,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace OpenGov.Scrapers
 {
-    public class Jupiter: IScraper
+    public class Jupiter : IScraper
     {
         private string jupiterUrl;
 
@@ -17,7 +18,7 @@ namespace OpenGov.Scrapers
             this.jupiterUrl = jupiterUrl;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenAgendaItems)
         {
             HttpClient http = new HttpClient();
 
@@ -38,9 +39,6 @@ namespace OpenGov.Scrapers
                 Uri meetingUri = new Uri(url, meetingUrl);
 
                 meetingUrl = meetingUri.ToString();
-
-                if (seenMeetings.Contains(meetingUrl))
-                    continue;
 
                 string meetingHtml = await http.GetStringAsync(meetingUri);
 
@@ -63,26 +61,29 @@ namespace OpenGov.Scrapers
                     }
                 }
 
+                Meeting meeting = new Meeting { Url = meetingUri, Date = time, BoardName = body, AgendaItems = new List<AgendaItem>() };
+
                 foreach (var heading in meetingInfo.DocumentNode.SelectNodes("//h4"))
                 {
                     if (heading.InnerText == "Saker til behandling")
                     {
-                        var agenda = heading.NextSibling.NextSibling;
+                        var agenda = heading.NextSibling;
 
-                        foreach (var agendaItem in agenda.SelectNodes("descendant::td[@style='text-align: left;']"))
+                        foreach (var agendaItem in agenda.SelectNodes("descendant::tbody/tr"))
                         {
-                            string agendaItemTitle = agendaItem.InnerText;
+                            string number = agendaItem.ChildNodes[0].InnerText;
+                            string agendaItemTitle = agendaItem.ChildNodes[1].InnerText;
+                            string agendaItemUrl = meetingUrl + "#" + HttpUtility.UrlEncode(number);
 
-                            if (string.IsNullOrEmpty(phrase) || agendaItemTitle.ToLower().Contains(phrase))
+                            if (seenAgendaItems.Contains(agendaItemUrl))
+                                continue;
+
+                            meeting.AgendaItems.Add(new AgendaItem
                             {
-                                newMeetings.Add(new Meeting
-                                {
-                                    Date = time,
-                                    BoardName = body,
-                                    Title = agendaItemTitle,
-                                    Url = meetingUri
-                                });
-                            }
+                                Number = number,
+                                Title = agendaItemTitle,
+                                Url = new Uri(agendaItemUrl)
+                            });
                         }
                     }
                 }
@@ -91,7 +92,7 @@ namespace OpenGov.Scrapers
             return newMeetings;
         }
 
-        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
+        public async Task<IEnumerable<Document>> GetDocuments(AgendaItem item)
         {
             return new List<Document>();
         }

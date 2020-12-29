@@ -87,7 +87,7 @@ namespace OpenGovAlerts
 
                     try
                     {
-                        IEnumerable<Meeting> newMeetings = await scraper.FindMeetings(search.Phrase.ToLower(), seenMeetings);
+                        IEnumerable<Meeting> newMeetings = await scraper.GetNewMeetings(seenMeetings);
 
                         if (newMeetings.Any())
                         {
@@ -101,7 +101,11 @@ namespace OpenGovAlerts
 
                             foreach (var meeting in newMeetings.OrderByDescending(m => m.Date))
                             {
-                                body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.BoardName, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Title);
+                                foreach (var agendaItem in meeting.AgendaItems)
+                                {
+                                    body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n",
+                                        meeting.BoardName, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), agendaItem.Title);
+                                }
                             }
 
                             body.Append("</table>");

@@ -12,7 +12,7 @@ namespace OpenGov.Models
         public DateTime Start { get; set; }
         public IList<ObserverSearch> Subscribers { get; set; }
         public IList<SearchSource> Sources { get; set; }
-        public IList<SeenMeeting> SeenMeetings { get; set; }
+        public IList<SeenAgendaItem> SeenAgendaItems { get; set; }
         public IList<Match> Matches { get; set; }
     }
 }

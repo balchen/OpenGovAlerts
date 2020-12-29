@@ -22,7 +22,7 @@ namespace OpenGov.Storage
             this.baseFolder = baseFolder;
         }
 
-        public async Task<Uri> AddDocument(Meeting meeting, Document document, string path = "")
+        public async Task<Uri> AddDocument(AgendaItem item, Document document, string path = "")
         {
             DropboxCertHelper.InitializeCertPinning();
 
@@ -48,7 +48,7 @@ namespace OpenGov.Storage
             var client = new DropboxClient(accessToken, config);
 
             if (string.IsNullOrEmpty(path))
-                path = Path.Combine(baseFolder, meeting.Source.Name, meeting.Title, meeting.Date.ToString("yyyy-MM-dd") + "-" + meeting.BoardName);
+                path = Path.Combine(baseFolder, item.Meeting.Source.Name, item.Title, item.Meeting.Date.ToString("yyyy-MM-dd") + "-" + item.Meeting.BoardName);
 
             var filename = new string(document.Title.Select(ch => invalidFileNameChars.Contains(ch) ? '_' : ch).ToArray());
 

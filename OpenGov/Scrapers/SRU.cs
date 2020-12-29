@@ -22,22 +22,23 @@ namespace OpenGov.Scrapers
             http.BaseAddress = baseUrl;
         }
 
-        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
+        public async Task<IEnumerable<Document>> GetDocuments(AgendaItem agendaItem)
         {
-            string agendaItemJson = await http.GetStringAsync(string.Format("/api/utvalg/{0}/moter/{1}/behandlinger/", meeting.BoardId, meeting.MeetingId));
+            string agendaItemJson = await http.GetStringAsync(string.Format("/api/utvalg/{0}/moter/{1}/behandlinger/", agendaItem.Meeting.BoardId, agendaItem.Meeting.ExternalId));
 
             List<Document> documents = new List<Document>();
-            
+
             foreach (dynamic item in JArray.Parse(agendaItemJson))
             {
-                if (item.Id == meeting.AgendaItemId)
+                if (item.Id == agendaItem.ExternalId)
                 {
                     foreach (dynamic itemDocument in item.Dokumenter)
                     {
-                        Document document = new Document {
+                        Document document = new Document
+                        {
                             Title = itemDocument.Tittel,
                             Type = itemDocument.Dokumenttilknytning,
-                            Url = new Uri(baseUrl, string.Format("/api/utvalg/{0}/moter/{1}/dokumenter/{2}", meeting.BoardId, meeting.MeetingId, itemDocument.Rekkefolge))
+                            Url = new Uri(baseUrl, string.Format("/api/utvalg/{0}/moter/{1}/dokumenter/{2}", agendaItem.Meeting.BoardId, agendaItem.Meeting.ExternalId, itemDocument.Rekkefolge))
                         };
 
                         documents.Add(document);
@@ -48,7 +49,7 @@ namespace OpenGov.Scrapers
             return documents;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenAgendaItems)
         {
             List<Meeting> meetings = new List<Meeting>();
 
@@ -62,30 +63,38 @@ namespace OpenGov.Scrapers
                 {
                     string meetingUrl = string.Format("https://prokomresources.prokomcdn.no/plugins/sru-v2/iframe-app/app.html?url={2}&v=1.01#se:mote/moteid:{1}/utvalgid:{0}", board.Id, boardMeeting.Id, baseUrl.ToString());
 
-                    if (seenMeetings.Contains(meetingUrl))
-                        continue;
-
                     if (boardMeeting.Behandlinger != null)
                     {
+                        Meeting meeting = new Meeting
+                        {
+                            BoardId = board.Id,
+                            BoardName = board.Name,
+                            Date = boardMeeting.Start,
+                            ExternalId = boardMeeting.Id,
+                            Url = new Uri(meetingUrl),
+                            AgendaItems = new List<AgendaItem>()
+                        };
+
                         foreach (dynamic item in boardMeeting.Behandlinger)
                         {
                             string title = item.Tittel;
-                            if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase.ToLower()))
+                            string agendaItemUrl = meetingUrl + "#" + item.Id;
+
+                            if (seenAgendaItems.Contains(agendaItemUrl))
+                                continue;
+
+                            AgendaItem agendaItem = new AgendaItem
                             {
-                                Meeting meeting = new Meeting();
+                                Meeting = meeting,
+                                ExternalId = item.Id,
+                                Title = item.Tittel,
+                                Url = new Uri(agendaItemUrl)
+                            };
 
-                                meeting.BoardId = board.Id;
-                                meeting.MeetingId = boardMeeting.Id;
-                                meeting.AgendaItemId = item.Id;
-
-                                meeting.Date = boardMeeting.Start;
-                                meeting.BoardName = board.Name;
-                                meeting.Title = item.Tittel;
-                                meeting.Url = new Uri(meetingUrl);
-
-                                meetings.Add(meeting);
-                            }
+                            meeting.AgendaItems.Add(agendaItem);
                         }
+
+                        meetings.Add(meeting);
                     }
                 }
             }

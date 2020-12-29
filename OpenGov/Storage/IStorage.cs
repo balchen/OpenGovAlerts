@@ -6,6 +6,6 @@ namespace OpenGov.Storage
 {
     public interface IStorage
     {
-        Task<Uri> AddDocument(Meeting meeting, Document document, string path = "");
+        Task<Uri> AddDocument(AgendaItem item, Document document, string path = "");
     }
 }

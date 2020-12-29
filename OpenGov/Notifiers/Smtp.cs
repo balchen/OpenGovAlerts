@@ -25,13 +25,13 @@ namespace OpenGov.Notifiers
             {
                 body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0}</h3>\r\n\r\n<table>", searches.Key.Name);
 
-                foreach (var source in searches.GroupBy(m => m.Meeting.Source))
+                foreach (var source in searches.GroupBy(m => m.AgendaItem.Meeting.Source))
                 {
                     body.AppendFormat("<tr><td colspan=\"3\"><h4>{0}</h4></td></tr>\r\n", source.Key.Name);
 
-                    foreach (var match in source.OrderBy(m => m.Meeting.Date))
+                    foreach (var match in source.OrderBy(m => m.AgendaItem.Meeting.Date))
                     {
-                        body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{4}</a></td></tr>\r\n", match.Meeting.BoardName, match.Meeting.Url, match.Meeting.Date.ToString("dd.MM.yyyy"), match.Meeting.Source.Name, match.Meeting.Title);
+                        body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{4}</a></td></tr>\r\n", match.AgendaItem.Meeting.BoardName, match.AgendaItem.Url, match.AgendaItem.Meeting.Date.ToString("dd.MM.yyyy"), match.AgendaItem.Meeting.Source.Name, match.AgendaItem.Title);
                     }
                 }
 

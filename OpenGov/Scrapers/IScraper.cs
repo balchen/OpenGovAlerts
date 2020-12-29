@@ -6,7 +6,7 @@ namespace OpenGov.Scrapers
 {
     public interface IScraper
     {
-        Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings);
-        Task<IEnumerable<Document>> GetDocuments(Meeting meeting);
+        Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings);
+        Task<IEnumerable<Document>> GetDocuments(AgendaItem item);
     }
 }

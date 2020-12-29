@@ -2,13 +2,13 @@
 
 namespace OpenGov.Models
 {
-    public class SeenMeeting
+    public class SeenAgendaItem
     {
         public int SearchId { get; set; }
         public Search Search { get; set; }
 
-        public int MeetingId { get; set; }
-        public Meeting Meeting { get; set; }
+        public int AgendaItemId { get; set; }
+        public AgendaItem AgendaItem { get; set; }
 
         public DateTime DateSeen { get; set; }
     }

@@ -11,7 +11,7 @@ using System.Web;
 
 namespace OpenGov.Scrapers
 {
-    public class OpenGov: IScraper
+    public class OpenGov : IScraper
     {
         private string clientId;
 
@@ -20,25 +20,16 @@ namespace OpenGov.Scrapers
             this.clientId = clientId;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenAgendaItems)
         {
             HttpClient http = new HttpClient();
 
-            List<Meeting> meetings;
-
-            if (!string.IsNullOrEmpty(phrase))
-            {
-                meetings = await FindByPhrase(phrase, seenMeetings, http);
-            }
-            else
-            {
-                meetings = await FindNew(seenMeetings, http);
-            }
+            List<Meeting> meetings = await FindNew(seenAgendaItems, http);
 
             return meetings;
         }
 
-        private async Task<List<Meeting>> FindNew(ISet<string> seenMeetings, HttpClient http)
+        private async Task<List<Meeting>> FindNew(ISet<string> seenAgendaItems, HttpClient http)
         {
             Uri url = new Uri(string.Format("http://opengov.cloudapp.net/Meetings/{0}", clientId));
 
@@ -60,29 +51,37 @@ namespace OpenGov.Scrapers
                     var meetingId = meetingUri.Segments[meetingUri.Segments.Length - 1];
                     meetingUrl = meetingUri.ToString();
 
-                    if (seenMeetings.Contains(meetingUrl))
+                    if (seenAgendaItems.Contains(meetingUrl))
                         continue;
 
                     DateTime meetingDate = DateTime.ParseExact(HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText), "dd.MM.yyyy", CultureInfo.CurrentCulture);
-                    newMeetings.AddRange(await FindAgendaItems(meetingUrl, meetingId, meetingDate, clientId, http));
+
+                    newMeetings.Add(await GetMeetingDetails(meetingUrl, meetingId, meetingDate, clientId, http));
                 }
             }
 
             return newMeetings;
         }
 
-        private async Task<IEnumerable<Meeting>> FindAgendaItems(string meetingUrl, string meetingId, DateTime meetingDate, string clientId, HttpClient http)
+        private async Task<Meeting> GetMeetingDetails(string meetingUrl, string meetingId, DateTime meetingDate, string clientId, HttpClient http)
         {
             string html = await http.GetStringAsync(meetingUrl);
 
             HtmlDocument doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-            List<Meeting> newMeetings = new List<Meeting>();
-
             string boardName = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//div[@class='meetingsDetailsDiv']/div[@class='details']/div[@class='detailsList']/div[@class='detailContent']").InnerText).Trim();
 
             var agendaItems = doc.DocumentNode.SelectNodes("//div[@class='meetingAgendaList']/ul/li/a");
+
+            Meeting meeting = new Meeting
+            {
+                Url = new Uri(meetingUrl),
+                ExternalId = meetingId,
+                Date = meetingDate,
+                BoardName = boardName,
+                AgendaItems = new List<AgendaItem>()
+            };
 
             if (agendaItems != null)
             {
@@ -96,49 +95,23 @@ namespace OpenGov.Scrapers
                         string url = string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/Details/{2}?agendaItemId={1}", clientId, id, meetingId);
                         string title = HttpUtility.HtmlDecode(agendaItem.SelectSingleNode("descendant::div[@class='accordionTitle']").InnerText).Trim();
 
-                        newMeetings.Add(new Meeting
+                        meeting.AgendaItems.Add(new AgendaItem
                         {
-                            BoardName = boardName,
+                            Meeting = meeting,
+                            ExternalId = id,
                             Title = title,
-                            Url = new Uri(url),
-                            Date = meetingDate,
-                            AgendaItemId = id
+                            Url = new Uri(url)
                         });
                     }
                 }
             }
 
-            return newMeetings;
+            return meeting;
         }
 
-        private async Task<List<Meeting>> FindByPhrase(string phrase, ISet<string> seenMeetings, HttpClient http)
+        public async Task<IEnumerable<Document>> GetDocuments(AgendaItem item)
         {
-            List<Meeting> foundMeetings = new List<Meeting>();
-
-            foreach (Meeting newMeeting in await FindNew(seenMeetings, http))
-            {
-                if (newMeeting.Title.ToLower().Contains(phrase))
-                {
-                    foundMeetings.Add(newMeeting);
-                    continue;
-                }
-
-                foreach (Document document in await GetDocuments(newMeeting))
-                {
-                    if (document.Title.ToLower().Contains(phrase))
-                    {
-                        foundMeetings.Add(newMeeting);
-                        break;
-                    }
-                }
-            }
-
-            return foundMeetings;
-        }
-
-        public async Task<IEnumerable<Document>> GetDocuments(Meeting meeting)
-        {
-            return await GetAgendaItemDocumentUrls(clientId, meeting.AgendaItemId);
+            return await GetAgendaItemDocumentUrls(clientId, item.ExternalId);
         }
 
         private async Task<IEnumerable<Document>> GetAgendaItemDocumentUrls(string clientId, string agendaItemId)
