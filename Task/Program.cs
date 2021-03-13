@@ -109,7 +109,7 @@ namespace OpenGovAlerts
                                 foreach (var agendaItem in meeting.AgendaItems)
                                 {
                                     body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n",
-                                        meeting.BoardName, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), agendaItem.Title);
+                                        meeting.BoardName, agendaItem.Url, meeting.Date.ToString("dd.MM.yyyy"), agendaItem.Title);
                                 }
                             }
 
