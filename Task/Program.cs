@@ -58,7 +58,7 @@ namespace OpenGovAlerts
 
                 foreach (var client in clients)
                 {
-                    List<string> loadedMeetings = new List<string>();
+                    List<string> loadedAgendaItems = new List<string>();
 
                     if (!Directory.Exists(Path.Combine(client.Name, search.Phrase)))
                         Directory.CreateDirectory(Path.Combine(client.Name, search.Phrase));
@@ -67,10 +67,10 @@ namespace OpenGovAlerts
 
                     if (File.Exists(seenMeetingsPath))
                     {
-                        loadedMeetings = (await File.ReadAllTextAsync(seenMeetingsPath)).Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
+                        loadedAgendaItems = (await File.ReadAllTextAsync(seenMeetingsPath)).Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
                     }
 
-                    HashSet<string> seenMeetings = new HashSet<string>(loadedMeetings);
+                    HashSet<string> seenAgendaItems = new HashSet<string>(loadedAgendaItems);
 
                     IScraper scraper = null;
 
@@ -87,12 +87,17 @@ namespace OpenGovAlerts
 
                     try
                     {
-                        IEnumerable<Meeting> newMeetings = await scraper.GetNewMeetings(seenMeetings);
+                        IEnumerable<Meeting> newMeetings = await scraper.GetNewMeetings(seenAgendaItems);
+
+                        foreach (Meeting meeting in newMeetings)
+                            meeting.AgendaItems = meeting.AgendaItems.Where(a => a.Title.ToLower().Contains(search.Phrase.ToLower())).ToList();
+
+                        seenAgendaItems.UnionWith(newMeetings.SelectMany(meeting => meeting.AgendaItems).Select(a => a.Url.ToString()));
+
+                        newMeetings = newMeetings.Where(m => m.AgendaItems.Any() && m.Date > DateTime.Now);
 
                         if (newMeetings.Any())
                         {
-                            seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
-
                             MailMessage email = new MailMessage(config.Smtp.Sender, client.NotifyEmail);
                             email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
 
@@ -123,12 +128,12 @@ namespace OpenGovAlerts
                             NEVER_EAT_POISON_Disable_CertificateValidation();
 
                             await smtp.SendMailAsync(email);
+                        }
 
-                            using (var file = new StreamWriter(new FileStream(seenMeetingsPath, FileMode.Create, FileAccess.Write)))
-                            {
-                                foreach (string meetingUrl in seenMeetings)
-                                    await file.WriteLineAsync(meetingUrl);
-                            }
+                        using (var file = new StreamWriter(new FileStream(seenMeetingsPath, FileMode.Create, FileAccess.Write)))
+                        {
+                            foreach (string meetingUrl in seenAgendaItems)
+                                await file.WriteLineAsync(meetingUrl);
                         }
                     }
                     catch (Exception ex)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -25,7 +26,7 @@ namespace OpenGov.Scrapers
             this.baseQuery = baseQuery;
         }
 
-        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenAgendaItems)
         {
             Uri url = new Uri(baseUrl);
 
@@ -50,13 +51,20 @@ namespace OpenGov.Scrapers
                 else
                     boardName = searchMeeting.source.arkivskaperSorteringNavn;
 
-                if (searchMeeting.source.type[0] == "Moetemappe" && !seenMeetings.Contains(id))
+                if (searchMeeting.source.type[0] == "Moetemappe")
                 {
                     await Task.Delay(10000);
                     Meeting meeting = new Meeting { ExternalId = id, BoardId = boardId, BoardName = boardName, Date = date };
 
                     IList<AgendaItem> agendaItems = await GetAgendaItems(meeting);
-                    meetings.Add(meeting);
+
+                    agendaItems = agendaItems.Where(a => !seenAgendaItems.Contains(a.Url.ToString())).ToList();
+
+                    if (agendaItems.Count > 0)
+                    {
+                        meeting.AgendaItems = agendaItems;
+                        meetings.Add(meeting);
+                    }
                 }
             }
 

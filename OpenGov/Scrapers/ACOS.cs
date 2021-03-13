@@ -20,7 +20,7 @@ namespace OpenGov.Scrapers
             http = new HttpClient();
         }
 
-        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenItems)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenAgendaItems)
         {
             Uri calendarUrl = new Uri(url, "?response=moteplan");
 
@@ -61,17 +61,17 @@ namespace OpenGov.Scrapers
                                 DateTime date = new DateTime(year, month, day);
                                 string meetingId = HttpUtility.ParseQueryString(meetingUrl.Query).Get("moteid");
 
-                                if (seenItems.Contains(meetingUrl.ToString()))
-                                    continue;
-
                                 Meeting meeting = new Meeting { ExternalId = meetingId, BoardId = boardId, BoardName = boardName, Date = date, Url = meetingUrl };
 
                                 var items = await GetAgendaItems(meetingUrl);
 
+                                if (items == null)
+                                    continue;
+
                                 foreach (var item in items)
                                     item.Meeting = meeting;
 
-                                meeting.AgendaItems = items.Where(i => !seenItems.Contains(i.Url.ToString())).ToList();
+                                meeting.AgendaItems = items.Where(i => !seenAgendaItems.Contains(i.Url.ToString())).ToList();
 
                                 if (meeting != null && meeting.AgendaItems != null && meeting.AgendaItems.Count > 0)
                                     newMeetings.Add(meeting);

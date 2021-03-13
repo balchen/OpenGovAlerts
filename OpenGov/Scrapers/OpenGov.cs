@@ -23,6 +23,7 @@ namespace OpenGov.Scrapers
         public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenAgendaItems)
         {
             HttpClient http = new HttpClient();
+            http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
 
             List<Meeting> meetings = await FindNew(seenAgendaItems, http);
 
@@ -56,14 +57,17 @@ namespace OpenGov.Scrapers
 
                     DateTime meetingDate = DateTime.ParseExact(HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText), "dd.MM.yyyy", CultureInfo.CurrentCulture);
 
-                    newMeetings.Add(await GetMeetingDetails(meetingUrl, meetingId, meetingDate, clientId, http));
+                    Meeting newMeeting = await GetMeetingDetails(seenAgendaItems, meetingUrl, meetingId, meetingDate, clientId, http);
+
+                    if (newMeeting != null)
+                        newMeetings.Add(newMeeting);
                 }
             }
 
             return newMeetings;
         }
 
-        private async Task<Meeting> GetMeetingDetails(string meetingUrl, string meetingId, DateTime meetingDate, string clientId, HttpClient http)
+        private async Task<Meeting> GetMeetingDetails(ISet<string> seenAgendaItems, string meetingUrl, string meetingId, DateTime meetingDate, string clientId, HttpClient http)
         {
             string html = await http.GetStringAsync(meetingUrl);
 
@@ -95,18 +99,24 @@ namespace OpenGov.Scrapers
                         string url = string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/Details/{2}?agendaItemId={1}", clientId, id, meetingId);
                         string title = HttpUtility.HtmlDecode(agendaItem.SelectSingleNode("descendant::div[@class='accordionTitle']").InnerText).Trim();
 
-                        meeting.AgendaItems.Add(new AgendaItem
+                        if (!seenAgendaItems.Contains(url))
                         {
-                            Meeting = meeting,
-                            ExternalId = id,
-                            Title = title,
-                            Url = new Uri(url)
-                        });
+                            meeting.AgendaItems.Add(new AgendaItem
+                            {
+                                Meeting = meeting,
+                                ExternalId = id,
+                                Title = title,
+                                Url = new Uri(url)
+                            });
+                        }
                     }
                 }
             }
 
-            return meeting;
+            if (meeting.AgendaItems.Count > 0)
+                return meeting;
+            else
+                return null;
         }
 
         public async Task<IEnumerable<Document>> GetDocuments(AgendaItem item)

@@ -87,6 +87,9 @@ namespace OpenGov.Scrapers
                         }
                     }
                 }
+
+                if (meeting.AgendaItems.Count > 0)
+                    newMeetings.Add(meeting);
             }
 
             return newMeetings;

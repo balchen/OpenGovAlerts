@@ -18,7 +18,7 @@ namespace OpenGov.Scrapers
             this.baseUrl = baseUrl;
         }
 
-        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenAgendaItems)
         {
             HttpClient http = new HttpClient();
             string html = await http.GetStringAsync(baseUrl);
@@ -35,21 +35,25 @@ namespace OpenGov.Scrapers
                 throw new ArgumentException("Invalid HTML document for " + baseUrl.ToString() + "no calendar-table found");
             }
 
-            foreach (var meetingLink in calendarTable.SelectNodes("descendant::a[@class='calendar-link']"))
+            var meetingLinks = calendarTable.SelectNodes("descendant::a[@class='calendar-link']");
+
+            if (meetingLinks != null)
             {
-                var meetingUrl = new Uri(baseUrl, HttpUtility.HtmlDecode(meetingLink.Attributes["href"].Value));
+                foreach (var meetingLink in meetingLinks)
+                {
+                    var meetingUrl = new Uri(baseUrl, HttpUtility.HtmlDecode(meetingLink.Attributes["href"].Value));
 
-                if (seenMeetings.Contains(meetingUrl.ToString()))
-                    continue;
+                    var meeting = await GetMeeting(seenAgendaItems, http, meetingUrl);
 
-                var meeting = await GetMeeting(http, meetingUrl);
-                newMeetings.Add(meeting);
+                    if (meeting != null)
+                        newMeetings.Add(meeting);
+                }
             }
 
             return newMeetings;
         }
 
-        private async Task<Meeting> GetMeeting(HttpClient http, Uri url)
+        private async Task<Meeting> GetMeeting(ISet<string> seenAgendaItems, HttpClient http, Uri url)
         {
             string html = await http.GetStringAsync(url);
 
@@ -87,9 +91,14 @@ namespace OpenGov.Scrapers
                     var docsLink = caseRow.SelectSingleNode("descendant::td[@headers='utvCasesTypeJPDetaljer']/a[@class='registryentry-link']");
                     Uri docsUrl = docsLink == null ? null : new Uri(url, HttpUtility.HtmlDecode(docsLink.Attributes["href"].Value));
 
+                    string agendaItemUrl = url.ToString() + "#" + docsUrl;
+
+                    if (seenAgendaItems.Contains(agendaItemUrl))
+                        continue;
+
                     AgendaItem item = new AgendaItem();
                     item.Title = title;
-                    item.Url = url;
+                    item.Url = new Uri(agendaItemUrl);
                     item.DocumentsUrl = docsUrl;
 
                     items.Add(item);
@@ -98,7 +107,10 @@ namespace OpenGov.Scrapers
 
             meeting.AgendaItems = items;
 
-            return meeting;
+            if (items.Count > 0)
+                return meeting;
+            else
+                return null;
         }
 
         public async Task<IEnumerable<Document>> GetDocuments(AgendaItem item)
