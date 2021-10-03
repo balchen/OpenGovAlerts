@@ -14,6 +14,7 @@ using OpenGov.Storage;
 using System.Net.Http.Headers;
 using IronPdf;
 using Hangfire.Storage;
+using OpenGov.TaskManagers;
 
 namespace OpenGovAlerts.Services
 {
@@ -93,11 +94,9 @@ namespace OpenGovAlerts.Services
                 .GroupBy(m => m.Subscriber)
                 .ToListAsync().ConfigureAwait(false))
             {
-                //await UploadToStorage(toNotify.Key, toNotify).ConfigureAwait(false);
-                //await AddToTaskManager(toNotify.Key, toNotify).ConfigureAwait(false);
+                var matches = toNotify.Select(m => m.Match);
 
                 Smtp smtp = new Smtp();
-                var matches = toNotify.Select(m => m.Match);
                 await smtp.Notify(matches, toNotify.Key).ConfigureAwait(false);
 
                 foreach (Match match in matches)
@@ -106,12 +105,23 @@ namespace OpenGovAlerts.Services
                 }
 
                 await db.SaveChangesAsync().ConfigureAwait(false);
+
+                //await UploadToStorage(toNotify.Key, matches).ConfigureAwait(false);
+                //await AddToTaskManager(toNotify.Key, matches).ConfigureAwait(false);
             }
         }
 
-        private async Task AddToTaskManager(Observer key, IEnumerable<Match> toNotify)
+        private async Task AddToTaskManager(Observer observer, IEnumerable<Match> matches)
         {
-            throw new NotImplementedException();
+            foreach (TaskManagerConfig config in observer.TaskManager)
+            {
+                ITaskManager taskManager = GetTaskManager(config.Url);
+
+                foreach (Match match in matches)
+                {
+                    await taskManager.AddTask(match.Meeting);
+                }
+            }
         }
 
         private async Task UploadToStorage(Observer observer, IEnumerable<Match> matches)
@@ -223,6 +233,20 @@ namespace OpenGovAlerts.Services
                     return new LocalDisk(uri.PathAndQuery);
                 default:
                     throw new ArgumentException("Unknown storage provider URL " + url);
+            }
+        }
+
+        public static ITaskManager GetTaskManager(string url)
+        {
+            Uri uri = new Uri(url);
+
+            switch (uri.Scheme)
+            {
+                case "trello":
+                    string[] boardAndListId = uri.AbsolutePath.Split('/');
+                    return new Trello(uri.Host, uri.UserInfo, boardAndListId[0], boardAndListId[1]);
+                default:
+                    throw new ArgumentException("Unknown task manager URL " + url);
             }
         }
     }
