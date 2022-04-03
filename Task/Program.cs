@@ -82,8 +82,8 @@ namespace OpenGovAlerts
                         scraper = new SRU(new Uri(client.SRUUrl));
                     else if (!string.IsNullOrEmpty(client.ACOSUrl))
                         scraper = new ACOS(new Uri(client.ACOSUrl));
-                    else if (!string.IsNullOrEmpty(client.ElementsUrl))
-                        scraper = new Elements(new Uri(client.ElementsUrl));
+                    else if (!string.IsNullOrEmpty(client.ElementsTenantId))
+                        scraper = new Elements(client.ElementsTenantId);
 
                     try
                     {
@@ -94,6 +94,7 @@ namespace OpenGovAlerts
                             seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
 
                             MailMessage email = new MailMessage(config.Smtp.Sender, client.NotifyEmail);
+                            email.SubjectEncoding = Encoding.UTF8;
                             email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
 
                             StringBuilder body = new StringBuilder();

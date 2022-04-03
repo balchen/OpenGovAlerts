@@ -115,9 +115,11 @@ namespace OpenGov.Scrapers
         {
             List<Meeting> foundMeetings = new List<Meeting>();
 
+            string searchPhrase = phrase?.ToLower();
+
             foreach (Meeting newMeeting in await FindNew(seenMeetings, http))
             {
-                if (newMeeting.Title.ToLower().Contains(phrase))
+                if (newMeeting.Title.ToLower().Contains(searchPhrase))
                 {
                     foundMeetings.Add(newMeeting);
                     continue;
@@ -125,7 +127,7 @@ namespace OpenGov.Scrapers
 
                 foreach (Document document in await GetDocuments(newMeeting))
                 {
-                    if (document.Title.ToLower().Contains(phrase))
+                    if (document.Title.ToLower().Contains(searchPhrase))
                     {
                         foundMeetings.Add(newMeeting);
                         break;

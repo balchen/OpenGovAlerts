@@ -30,6 +30,8 @@ namespace OpenGov.Scrapers
 
             List<Meeting> newMeetings = new List<Meeting>();
 
+            string searchPhrase = phrase?.ToLower();
+
             foreach (var meetingLink in calendar.DocumentNode.SelectNodes("//div[@id='motekalender_table']/table//a"))
             {
                 string meetingUrl = meetingLink.GetAttributeValue("href", null);
@@ -73,7 +75,7 @@ namespace OpenGov.Scrapers
                         {
                             string agendaItemTitle = agendaItem.InnerText;
 
-                            if (string.IsNullOrEmpty(phrase) || agendaItemTitle.ToLower().Contains(phrase))
+                            if (string.IsNullOrEmpty(searchPhrase) || agendaItemTitle.ToLower().Contains(searchPhrase))
                             {
                                 newMeetings.Add(new Meeting
                                 {

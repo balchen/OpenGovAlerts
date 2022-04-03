@@ -14,7 +14,7 @@ namespace OpenGovTests
         [TestMethod]
         public async Task FindNew()
         {
-            IScraper scraper = new OpenGov.Scrapers.Elements(new Uri("https://einnsyn.public.cloudservices.no/rfk-innsyn/dmb"));
+            IScraper scraper = new OpenGov.Scrapers.Elements("971045698");
 
             var meetings = await scraper.FindMeetings(null, new HashSet<string>());
 
