@@ -15,7 +15,7 @@ namespace OpenGovTests
         {
             IScraper scraper = new OpenGov.Scrapers.SRU(new Uri("https://sru23.porsgrunn.kommune.no"));
 
-            var meetings = await scraper.FindMeetings(null, new HashSet<string>());
+            var meetings = await scraper.GetNewMeetings(new HashSet<string>());
 
             Assert.IsNotNull(meetings);
 

@@ -1,21 +1,17 @@
-﻿using HtmlAgilityPack;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using OpenGov.Models;
 using OpenGov.Scrapers;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Mail;
 using System.Net.Mime;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web;
 
 namespace OpenGovAlerts
 {
@@ -87,39 +83,66 @@ namespace OpenGovAlerts
 
                     try
                     {
-                        IEnumerable<Meeting> newMeetings = await scraper.FindMeetings(search.Phrase.ToLower(), seenMeetings);
+                        IEnumerable<Meeting> newMeetings = await scraper.GetNewMeetings(seenMeetings);
 
                         if (newMeetings.Any())
                         {
-                            seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
+                            string searchPhrase = search.Phrase.ToLower();
 
-                            MailMessage email = new MailMessage(config.Smtp.Sender, client.NotifyEmail);
-                            email.SubjectEncoding = Encoding.UTF8;
-                            email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
+                            List<Meeting> foundMeetings = new List<Meeting>();
 
-                            StringBuilder body = new StringBuilder();
-                            body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0} i {1}:</h3>\r\n\r\n<table>", search.Name, client.Name);
-
-                            foreach (var meeting in newMeetings.OrderByDescending(m => m.Date))
+                            foreach (Meeting newMeeting in newMeetings)
                             {
-                                body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.BoardName, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Title);
+                                if (newMeeting.Title.ToLower().Contains(searchPhrase))
+                                {
+                                    foundMeetings.Add(newMeeting);
+                                    continue;
+                                }
+
+                                foreach (Document document in newMeeting.Documents)
+                                {
+                                    if (document.Title.ToLower().Contains(searchPhrase))
+                                    {
+                                        foundMeetings.Add(newMeeting);
+                                        break;
+                                    }
+                                }
                             }
 
-                            body.Append("</table>");
+                            seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
 
-                            email.Body = body.ToString();
-                            email.IsBodyHtml = true;
-                            email.BodyEncoding = Encoding.UTF8;
-                            email.BodyTransferEncoding = TransferEncoding.Base64;
+                            newMeetings = foundMeetings.Where(m => DateTime.Now.Subtract(m.Date).TotalDays < 30);
 
-                            SmtpClient smtp = new SmtpClient(config.Smtp.Server, config.Smtp.Port);
-                            smtp.UseDefaultCredentials = false;
-                            smtp.Credentials = new NetworkCredential(config.Smtp.Sender, config.Smtp.Password);
-                            smtp.EnableSsl = true;
+                            if (newMeetings.Any())
+                            {
+                                MailMessage email = new MailMessage(config.Smtp.Sender, client.NotifyEmail);
+                                email.SubjectEncoding = Encoding.UTF8;
+                                email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
 
-                            NEVER_EAT_POISON_Disable_CertificateValidation();
+                                StringBuilder body = new StringBuilder();
+                                body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0} i {1}:</h3>\r\n\r\n<table>", search.Name, client.Name);
 
-                            await smtp.SendMailAsync(email);
+                                foreach (var meeting in newMeetings.OrderByDescending(m => m.Date))
+                                {
+                                    body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.BoardName, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Title);
+                                }
+
+                                body.Append("</table>");
+
+                                email.Body = body.ToString();
+                                email.IsBodyHtml = true;
+                                email.BodyEncoding = Encoding.UTF8;
+                                email.BodyTransferEncoding = TransferEncoding.Base64;
+
+                                SmtpClient smtp = new SmtpClient(config.Smtp.Server, config.Smtp.Port);
+                                smtp.UseDefaultCredentials = false;
+                                smtp.Credentials = new NetworkCredential(config.Smtp.Sender, config.Smtp.Password);
+                                smtp.EnableSsl = true;
+
+                                NEVER_EAT_POISON_Disable_CertificateValidation();
+
+                                await smtp.SendMailAsync(email);
+                            }
 
                             using (var file = new StreamWriter(new FileStream(seenMeetingsPath, FileMode.Create, FileAccess.Write)))
                             {

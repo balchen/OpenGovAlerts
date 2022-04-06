@@ -19,7 +19,7 @@ namespace OpenGov.Scrapers
             http = new HttpClient();
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
         {
             Uri calendarUrl = new Uri(url, "?response=moteplan");
 
@@ -62,7 +62,7 @@ namespace OpenGov.Scrapers
                                 if (seenMeetings.Contains(meetingUrl.ToString()))
                                     continue;
 
-                                var meeting = await FindMeeting(phrase, meetingUrl, date, boardName, boardId);
+                                var meeting = await FindMeeting(meetingUrl, date, boardName, boardId);
 
                                 if (meeting != null)
                                     newMeetings.Add(meeting);
@@ -75,7 +75,7 @@ namespace OpenGov.Scrapers
             return newMeetings;
         }
 
-        private async Task<Meeting> FindMeeting(string phrase, Uri meetingUrl, DateTime date, string boardName, string boardId)
+        private async Task<Meeting> FindMeeting(Uri meetingUrl, DateTime date, string boardName, string boardId)
         {
             string meetingId = HttpUtility.ParseQueryString(meetingUrl.Query).Get("moteid");
 
@@ -104,20 +104,17 @@ namespace OpenGov.Scrapers
 
                 if (agendaItemId != null && title != null)
                 {
-                    if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase))
+                    return new Meeting
                     {
-                        return new Meeting
-                        {
-                            Id = int.Parse(meetingId),
-                            AgendaItemId = agendaItemId,
-                            BoardId = boardId,
-                            BoardName = boardName,
-                            Date = date,
-                            Title = title.RemoveWhitespace(),
-                            MeetingId = meetingId,
-                            Url = meetingUrl
-                        };
-                    }
+                        Id = int.Parse(meetingId),
+                        AgendaItemId = agendaItemId,
+                        BoardId = boardId,
+                        BoardName = boardName,
+                        Date = date,
+                        Title = title.RemoveWhitespace(),
+                        MeetingId = meetingId,
+                        Url = meetingUrl
+                    };
                 }
             }
 

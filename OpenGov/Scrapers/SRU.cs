@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpenGov.Models;
 
@@ -27,14 +24,15 @@ namespace OpenGov.Scrapers
             string agendaItemJson = await http.GetStringAsync(string.Format("/api/utvalg/{0}/moter/{1}/behandlinger/", meeting.BoardId, meeting.MeetingId));
 
             List<Document> documents = new List<Document>();
-            
+
             foreach (dynamic item in JArray.Parse(agendaItemJson))
             {
                 if (item.Id == meeting.AgendaItemId)
                 {
                     foreach (dynamic itemDocument in item.Dokumenter)
                     {
-                        Document document = new Document {
+                        Document document = new Document
+                        {
                             Title = itemDocument.Tittel,
                             Type = itemDocument.Dokumenttilknytning,
                             Url = new Uri(baseUrl, string.Format("/api/utvalg/{0}/moter/{1}/dokumenter/{2}", meeting.BoardId, meeting.MeetingId, itemDocument.Rekkefolge))
@@ -48,7 +46,7 @@ namespace OpenGov.Scrapers
             return documents;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
         {
             List<Meeting> meetings = new List<Meeting>();
 
@@ -69,22 +67,18 @@ namespace OpenGov.Scrapers
                     {
                         foreach (dynamic item in boardMeeting.Behandlinger)
                         {
-                            string title = item.Tittel;
-                            if (string.IsNullOrEmpty(phrase) || title.ToLower().Contains(phrase.ToLower()))
-                            {
-                                Meeting meeting = new Meeting();
+                            Meeting meeting = new Meeting();
 
-                                meeting.BoardId = board.Id;
-                                meeting.MeetingId = boardMeeting.Id;
-                                meeting.AgendaItemId = item.Id;
+                            meeting.BoardId = board.Id;
+                            meeting.MeetingId = boardMeeting.Id;
+                            meeting.AgendaItemId = item.Id;
 
-                                meeting.Date = boardMeeting.Start;
-                                meeting.BoardName = board.Name;
-                                meeting.Title = item.Tittel;
-                                meeting.Url = new Uri(meetingUrl);
+                            meeting.Date = boardMeeting.Start;
+                            meeting.BoardName = board.Name;
+                            meeting.Title = item.Tittel;
+                            meeting.Url = new Uri(meetingUrl);
 
-                                meetings.Add(meeting);
-                            }
+                            meetings.Add(meeting);
                         }
                     }
                 }

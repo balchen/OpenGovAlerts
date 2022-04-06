@@ -25,7 +25,7 @@ namespace OpenGov.Scrapers
             this.baseQuery = baseQuery;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
         {
             Uri url = new Uri(baseUrl);
 
@@ -53,7 +53,7 @@ namespace OpenGov.Scrapers
                 if (searchMeeting.source.type[0] == "Moetemappe" && !seenMeetings.Contains(id))
                 {
                     await Task.Delay(10000);
-                    IEnumerable<Meeting> agendaItems = await GetAgendaItems(phrase, id, boardId, boardName, date);
+                    IEnumerable<Meeting> agendaItems = await GetAgendaItems(id, boardId, boardName, date);
                     meetings.AddRange(agendaItems);
                 }
             }
@@ -61,7 +61,7 @@ namespace OpenGov.Scrapers
             return meetings;
         }
 
-        private async Task<IEnumerable<Meeting>> GetAgendaItems(string phrase, string meetingId, string boardId, string boardName, DateTime date)
+        private async Task<IEnumerable<Meeting>> GetAgendaItems(string meetingId, string boardId, string boardName, DateTime date)
         {
             Uri url = new Uri(string.Format(meetingUrl, meetingId));
 
@@ -77,10 +77,7 @@ namespace OpenGov.Scrapers
                 {
                     string title = (string)item["http://www.arkivverket.no/standarder/noark5/arkivstruktur/offentligTittel_SENSITIV"][0]["@value"];
 
-                    if (string.IsNullOrEmpty(phrase) || phrase == "*" || title.Contains(phrase))
-                    {
-                        agendaItems.Add(new Meeting { BoardId = boardId, BoardName = boardName, Date = date, Title = title, Url = new Uri(meetingId), MeetingId = meetingId, AgendaItemId = (string)item["@id"] });
-                    }
+                    agendaItems.Add(new Meeting { BoardId = boardId, BoardName = boardName, Date = date, Title = title, Url = new Uri(meetingId), MeetingId = meetingId, AgendaItemId = (string)item["@id"] });
                 }
             }
 

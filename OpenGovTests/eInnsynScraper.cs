@@ -19,7 +19,7 @@ namespace OpenGovTests
 
             IScraper scraper = new OpenGov.Scrapers.eInnsyn("https://einnsyn.no/api/result", query);
 
-            var meetings = await scraper.FindMeetings(null, new HashSet<string>());
+            var meetings = await scraper.GetNewMeetings(new HashSet<string>());
 
             Assert.IsNotNull(meetings);
 

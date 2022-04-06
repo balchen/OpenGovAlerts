@@ -15,7 +15,7 @@ namespace OpenGovTests
         {
             IScraper scraper = new OpenGov.Scrapers.ACOS(new Uri("http://nyttinnsyn.sola.kommune.no/wfinnsyn.ashx"));
 
-            var meetings = await scraper.FindMeetings(null, new HashSet<string>());
+            var meetings = await scraper.GetNewMeetings(new HashSet<string>());
 
             Assert.IsNotNull(meetings);
 

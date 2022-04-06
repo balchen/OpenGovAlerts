@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
-using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
 using OpenGov.Models;
 
@@ -32,15 +28,13 @@ namespace OpenGov.Scrapers
             http.DefaultRequestHeaders.Add("Tenant", TenantId);
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
         {
             string json = await http.GetStringAsync(string.Format("https://prod01.elementscloud.no/publikum/api/PredefinedQuery/DmbMeetings?year={0}", DateTime.Now.Year));
 
             List<Meeting> newMeetings = new List<Meeting>();
 
             JArray meetings = JArray.Parse(json);
-
-            string searchPhrase = phrase?.ToLower();
 
             foreach (JObject meeting in meetings)
             {
@@ -68,8 +62,7 @@ namespace OpenGov.Scrapers
 
                     foundMeeting.Documents = new List<Document>(await GetDocuments(foundMeeting));
 
-                    if (string.IsNullOrEmpty(searchPhrase) || foundMeeting.Title.ToLower().Contains(searchPhrase) || foundMeeting.Documents.Any(d => d.Title.ToLower().Contains(searchPhrase)))
-                        newMeetings.Add(foundMeeting);
+                    newMeetings.Add(foundMeeting);
                 }
             }
 

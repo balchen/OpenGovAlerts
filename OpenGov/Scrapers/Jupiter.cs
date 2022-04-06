@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace OpenGov.Scrapers
 {
-    public class Jupiter: IScraper
+    public class Jupiter : IScraper
     {
         private string jupiterUrl;
 
@@ -17,7 +17,7 @@ namespace OpenGov.Scrapers
             this.jupiterUrl = jupiterUrl;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
         {
             HttpClient http = new HttpClient();
 
@@ -29,8 +29,6 @@ namespace OpenGov.Scrapers
             calendar.LoadHtml(html);
 
             List<Meeting> newMeetings = new List<Meeting>();
-
-            string searchPhrase = phrase?.ToLower();
 
             foreach (var meetingLink in calendar.DocumentNode.SelectNodes("//div[@id='motekalender_table']/table//a"))
             {
@@ -75,16 +73,13 @@ namespace OpenGov.Scrapers
                         {
                             string agendaItemTitle = agendaItem.InnerText;
 
-                            if (string.IsNullOrEmpty(searchPhrase) || agendaItemTitle.ToLower().Contains(searchPhrase))
+                            newMeetings.Add(new Meeting
                             {
-                                newMeetings.Add(new Meeting
-                                {
-                                    Date = time,
-                                    BoardName = body,
-                                    Title = agendaItemTitle,
-                                    Url = meetingUri
-                                });
-                            }
+                                Date = time,
+                                BoardName = body,
+                                Title = agendaItemTitle,
+                                Url = meetingUri
+                            });
                         }
                     }
                 }

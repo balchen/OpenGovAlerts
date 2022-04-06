@@ -3,8 +3,6 @@ using OpenGov.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
@@ -20,20 +18,11 @@ namespace OpenGov.Scrapers
             this.clientId = clientId;
         }
 
-        public async Task<IEnumerable<Meeting>> FindMeetings(string phrase, ISet<string> seenMeetings)
+        public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings)
         {
             HttpClient http = new HttpClient();
 
-            List<Meeting> meetings;
-
-            if (!string.IsNullOrEmpty(phrase))
-            {
-                meetings = await FindByPhrase(phrase, seenMeetings, http);
-            }
-            else
-            {
-                meetings = await FindNew(seenMeetings, http);
-            }
+            List<Meeting> meetings = await FindNew(seenMeetings, http);
 
             return meetings;
         }
@@ -115,25 +104,6 @@ namespace OpenGov.Scrapers
         {
             List<Meeting> foundMeetings = new List<Meeting>();
 
-            string searchPhrase = phrase?.ToLower();
-
-            foreach (Meeting newMeeting in await FindNew(seenMeetings, http))
-            {
-                if (newMeeting.Title.ToLower().Contains(searchPhrase))
-                {
-                    foundMeetings.Add(newMeeting);
-                    continue;
-                }
-
-                foreach (Document document in await GetDocuments(newMeeting))
-                {
-                    if (document.Title.ToLower().Contains(searchPhrase))
-                    {
-                        foundMeetings.Add(newMeeting);
-                        break;
-                    }
-                }
-            }
 
             return foundMeetings;
         }
