@@ -99,12 +99,15 @@ namespace OpenGovAlerts
                                     continue;
                                 }
 
-                                foreach (Document document in newMeeting.Documents)
+                                if (newMeeting.Documents != null)
                                 {
-                                    if (document.Title.ToLower().Contains(searchPhrase))
+                                    foreach (Document document in newMeeting.Documents)
                                     {
-                                        foundMeetings.Add(newMeeting);
-                                        break;
+                                        if (document.Title.ToLower().Contains(searchPhrase))
+                                        {
+                                            foundMeetings.Add(newMeeting);
+                                            break;
+                                        }
                                     }
                                 }
                             }
