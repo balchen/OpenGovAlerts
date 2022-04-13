@@ -41,123 +41,125 @@ namespace OpenGovAlerts
         {
             var config = JsonConvert.DeserializeObject<Config>(await File.ReadAllTextAsync("config.json"));
 
-            foreach (Search search in config.Searches)
+            foreach (Client client in config.Clients)
             {
-                var clientIds = search.ClientId.Split(',');
-                var clients = config.Clients.Where(c => search.ClientId == "*" || c.Id == search.ClientId || clientIds.Contains(c.Id));
+                IScraper scraper = null;
 
-                if (!clients.Any())
+                if (!string.IsNullOrEmpty(client.OpenGovId))
+                    scraper = new OpenGov.Scrapers.OpenGov(client.OpenGovId);
+                else if (!string.IsNullOrEmpty(client.JupiterUrl))
+                    scraper = new Jupiter(client.JupiterUrl);
+                else if (!string.IsNullOrEmpty(client.SRUUrl))
+                    scraper = new SRU(new Uri(client.SRUUrl));
+                else if (!string.IsNullOrEmpty(client.ACOSUrl))
+                    scraper = new ACOS(new Uri(client.ACOSUrl));
+                else if (!string.IsNullOrEmpty(client.ElementsTenantId))
+                    scraper = new Elements(client.ElementsTenantId);
+
+                try
                 {
-                    Console.WriteLine(search.ClientId + " is invalid client for search " + search.Name);
-                    continue;
-                }
+                    Console.WriteLine("Getting new meetings for " + client.Name);
+                    IEnumerable<Meeting> newMeetings = await scraper.GetNewMeetings(new HashSet<string>());
 
-                foreach (var client in clients)
-                {
-                    List<string> loadedMeetings = new List<string>();
-
-                    if (!Directory.Exists(Path.Combine(client.Name, search.Phrase)))
-                        Directory.CreateDirectory(Path.Combine(client.Name, search.Phrase));
-
-                    string seenMeetingsPath = Path.Combine(client.Name, search.Phrase, "meetings.txt");
-
-                    if (File.Exists(seenMeetingsPath))
+                    if (newMeetings.Any())
                     {
-                        loadedMeetings = (await File.ReadAllTextAsync(seenMeetingsPath)).Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
-                    }
-
-                    HashSet<string> seenMeetings = new HashSet<string>(loadedMeetings);
-
-                    IScraper scraper = null;
-
-                    if (!string.IsNullOrEmpty(client.OpenGovId))
-                        scraper = new OpenGov.Scrapers.OpenGov(client.OpenGovId);
-                    else if (!string.IsNullOrEmpty(client.JupiterUrl))
-                        scraper = new Jupiter(client.JupiterUrl);
-                    else if (!string.IsNullOrEmpty(client.SRUUrl))
-                        scraper = new SRU(new Uri(client.SRUUrl));
-                    else if (!string.IsNullOrEmpty(client.ACOSUrl))
-                        scraper = new ACOS(new Uri(client.ACOSUrl));
-                    else if (!string.IsNullOrEmpty(client.ElementsTenantId))
-                        scraper = new Elements(client.ElementsTenantId);
-
-                    try
-                    {
-                        IEnumerable<Meeting> newMeetings = await scraper.GetNewMeetings(seenMeetings);
-
-                        if (newMeetings.Any())
+                        Console.WriteLine(newMeetings.Count() + " new meetings found for " + client.Name);
+                        foreach (Search search in config.Searches)
                         {
-                            string searchPhrase = search.Phrase.ToLower();
-
-                            List<Meeting> foundMeetings = new List<Meeting>();
-
-                            foreach (Meeting newMeeting in newMeetings)
+                            var clientIds = search.ClientId.Split(',');
+                            if (search.ClientId == "*" || clientIds.Any(id => id == client.Id))
                             {
-                                if (newMeeting.Title.ToLower().Contains(searchPhrase))
+                                Console.WriteLine("Searching new meetings from " + client.Name + " for '" + search.Phrase + "'");
+                                List<string> loadedMeetings = new List<string>();
+
+                                if (!Directory.Exists(Path.Combine(client.Name, search.Phrase)))
+                                    Directory.CreateDirectory(Path.Combine(client.Name, search.Phrase));
+
+                                string seenMeetingsPath = Path.Combine(client.Name, search.Phrase, "meetings.txt");
+
+                                if (File.Exists(seenMeetingsPath))
                                 {
-                                    foundMeetings.Add(newMeeting);
-                                    continue;
+                                    loadedMeetings = (await File.ReadAllTextAsync(seenMeetingsPath)).Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
                                 }
 
-                                if (newMeeting.Documents != null)
+                                HashSet<string> seenMeetings = new HashSet<string>(loadedMeetings);
+
+                                var newMeetingsForThisSearch = newMeetings.Where(m => !loadedMeetings.Any(l => l.Equals(m.Url.ToString())));
+
+                                string searchPhrase = search.Phrase.ToLower();
+
+                                List<Meeting> foundMeetings = new List<Meeting>();
+
+                                foreach (Meeting newMeeting in newMeetingsForThisSearch)
                                 {
-                                    foreach (Document document in newMeeting.Documents)
+                                    if (newMeeting.Title.ToLower().Contains(searchPhrase))
                                     {
-                                        if (document.Title.ToLower().Contains(searchPhrase))
+                                        Console.WriteLine("Found meeting from " + client.Name + " for '" + search.Phrase + "': " + newMeeting.Url.ToString());
+                                        foundMeetings.Add(newMeeting);
+                                        continue;
+                                    }
+
+                                    if (newMeeting.Documents != null)
+                                    {
+                                        foreach (Document document in newMeeting.Documents)
                                         {
-                                            foundMeetings.Add(newMeeting);
-                                            break;
+                                            if (!string.IsNullOrEmpty(document.Title) && document.Title.ToLower().Contains(searchPhrase))
+                                            {
+                                                Console.WriteLine("Found meeting from " + client.Name + " for '" + search.Phrase + "': " + newMeeting.Url.ToString());
+                                                foundMeetings.Add(newMeeting);
+                                                break;
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            seenMeetings.UnionWith(newMeetings.Select(meeting => meeting.Url.ToString()));
+                                seenMeetings.UnionWith(newMeetingsForThisSearch.Select(meeting => meeting.Url.ToString()));
 
-                            newMeetings = foundMeetings.Where(m => DateTime.Now.Subtract(m.Date).TotalDays < 30);
+                                newMeetingsForThisSearch = foundMeetings.Where(m => DateTime.Now.Subtract(m.Date).TotalDays < 30);
 
-                            if (newMeetings.Any())
-                            {
-                                MailMessage email = new MailMessage(config.Smtp.Sender, client.NotifyEmail);
-                                email.SubjectEncoding = Encoding.UTF8;
-                                email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
-
-                                StringBuilder body = new StringBuilder();
-                                body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0} i {1}:</h3>\r\n\r\n<table>", search.Name, client.Name);
-
-                                foreach (var meeting in newMeetings.OrderByDescending(m => m.Date))
+                                if (newMeetingsForThisSearch.Any())
                                 {
-                                    body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.BoardName, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Title);
+                                    MailMessage email = new MailMessage(config.Smtp.Sender, client.NotifyEmail);
+                                    email.SubjectEncoding = Encoding.Unicode;
+                                    email.Subject = "Nye møter for " + search.Name + " i " + client.Name;
+
+                                    StringBuilder body = new StringBuilder();
+                                    body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0} i {1}:</h3>\r\n\r\n<table>", search.Name, client.Name);
+
+                                    foreach (var meeting in newMeetingsForThisSearch.OrderByDescending(m => m.Date))
+                                    {
+                                        body.AppendFormat("<tr><td><a href=\"{1}\">{2}</a></td><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{3}</a></td></tr>\r\n", meeting.BoardName, meeting.Url, meeting.Date.ToString("dd.MM.yyyy"), meeting.Title);
+                                    }
+
+                                    body.Append("</table>");
+
+                                    email.Body = body.ToString();
+                                    email.IsBodyHtml = true;
+                                    email.BodyEncoding = Encoding.UTF8;
+                                    email.BodyTransferEncoding = TransferEncoding.Base64;
+
+                                    SmtpClient smtp = new SmtpClient(config.Smtp.Server, config.Smtp.Port);
+                                    smtp.UseDefaultCredentials = false;
+                                    smtp.Credentials = new NetworkCredential(config.Smtp.Sender, config.Smtp.Password);
+                                    smtp.EnableSsl = true;
+
+                                    NEVER_EAT_POISON_Disable_CertificateValidation();
+
+                                    await smtp.SendMailAsync(email);
                                 }
 
-                                body.Append("</table>");
-
-                                email.Body = body.ToString();
-                                email.IsBodyHtml = true;
-                                email.BodyEncoding = Encoding.UTF8;
-                                email.BodyTransferEncoding = TransferEncoding.Base64;
-
-                                SmtpClient smtp = new SmtpClient(config.Smtp.Server, config.Smtp.Port);
-                                smtp.UseDefaultCredentials = false;
-                                smtp.Credentials = new NetworkCredential(config.Smtp.Sender, config.Smtp.Password);
-                                smtp.EnableSsl = true;
-
-                                NEVER_EAT_POISON_Disable_CertificateValidation();
-
-                                await smtp.SendMailAsync(email);
-                            }
-
-                            using (var file = new StreamWriter(new FileStream(seenMeetingsPath, FileMode.Create, FileAccess.Write)))
-                            {
-                                foreach (string meetingUrl in seenMeetings)
-                                    await file.WriteLineAsync(meetingUrl);
+                                using (var file = new StreamWriter(new FileStream(seenMeetingsPath, FileMode.Create, FileAccess.Write)))
+                                {
+                                    foreach (string meetingUrl in seenMeetings)
+                                        await file.WriteLineAsync(meetingUrl);
+                                }
                             }
                         }
                     }
-                    catch (Exception ex)
-                    {
-
-                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error while processing meetings: " + ex.Message + "\n" + ex.StackTrace);
                 }
             }
         }
