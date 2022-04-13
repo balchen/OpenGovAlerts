@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OpenGovAlerts.Models;
 
 namespace OpenGovAlerts.Migrations
 {
     [DbContext(typeof(AlertsDbContext))]
-    partial class AlertsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20211003162923_CreatedByIdAndOtherChanges")]
+    partial class CreatedByIdAndOtherChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -19,41 +21,18 @@ namespace OpenGovAlerts.Migrations
                 .HasAnnotation("ProductVersion", "5.0.10")
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-            modelBuilder.Entity("OpenGov.Models.AgendaItem", b =>
+            modelBuilder.Entity("OpenGov.Models.Document", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<string>("ExternalId");
+                    b.Property<int?>("MeetingId")
+                        .HasColumnType("int");
 
-                    b.Property<int?>("MeetingId");
-
-                    b.Property<string>("Number");
-
-                    b.Property<DateTime>("Retrieved");
-
-                    b.Property<string>("Title");
-
-                    b.Property<string>("Url");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MeetingId");
-
-                    b.ToTable("AgendaItems");
-                });
-
-            modelBuilder.Entity("OpenGov.Models.Document", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<int?>("AgendaItemId");
-
-                    b.Property<string>("Text");
+                    b.Property<string>("Text")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .HasColumnType("nvarchar(max)");
@@ -66,7 +45,7 @@ namespace OpenGovAlerts.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AgendaItemId");
+                    b.HasIndex("MeetingId");
 
                     b.ToTable("Documents");
                 });
@@ -77,8 +56,6 @@ namespace OpenGovAlerts.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<int?>("AgendaItemId");
 
                     b.Property<string>("Excerpt")
                         .HasColumnType("nvarchar(max)");
@@ -97,8 +74,6 @@ namespace OpenGovAlerts.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AgendaItemId");
-
                     b.HasIndex("MeetingId");
 
                     b.HasIndex("SearchId");
@@ -113,6 +88,9 @@ namespace OpenGovAlerts.Migrations
                         .HasColumnType("int")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<string>("AgendaItemId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("BoardId")
                         .HasColumnType("nvarchar(max)");
 
@@ -122,11 +100,14 @@ namespace OpenGovAlerts.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ExternalId")
+                    b.Property<string>("MeetingId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("SourceId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Url")
                         .HasColumnType("nvarchar(max)");
@@ -231,22 +212,22 @@ namespace OpenGovAlerts.Migrations
                     b.ToTable("SearchSources");
                 });
 
-            modelBuilder.Entity("OpenGov.Models.SeenAgendaItem", b =>
+            modelBuilder.Entity("OpenGov.Models.SeenMeeting", b =>
                 {
                     b.Property<int>("SearchId")
                         .HasColumnType("int");
 
-                    b.Property<int>("AgendaItemId")
+                    b.Property<int>("MeetingId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("DateSeen")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("SearchId", "AgendaItemId");
+                    b.HasKey("SearchId", "MeetingId");
 
-                    b.HasIndex("AgendaItemId");
+                    b.HasIndex("MeetingId");
 
-                    b.ToTable("SeenAgendaItems");
+                    b.ToTable("SeenMeetings");
                 });
 
             modelBuilder.Entity("OpenGov.Models.Source", b =>
@@ -307,29 +288,18 @@ namespace OpenGovAlerts.Migrations
                     b.ToTable("TaskManagerConfig");
                 });
 
-            modelBuilder.Entity("OpenGov.Models.AgendaItem", b =>
+            modelBuilder.Entity("OpenGov.Models.Document", b =>
                 {
                     b.HasOne("OpenGov.Models.Meeting", "Meeting")
-                        .WithMany("AgendaItems")
+                        .WithMany("Documents")
                         .HasForeignKey("MeetingId");
 
                     b.Navigation("Meeting");
                 });
 
-            modelBuilder.Entity("OpenGov.Models.Document", b =>
-                {
-                    b.HasOne("OpenGov.Models.AgendaItem", "AgendaItem")
-                        .WithMany("Documents")
-                        .HasForeignKey("AgendaItemId");
-                });
-
             modelBuilder.Entity("OpenGov.Models.Match", b =>
                 {
-                    b.HasOne("OpenGov.Models.AgendaItem", "AgendaItem")
-                        .WithMany("Matches")
-                        .HasForeignKey("AgendaItemId");
-
-                    b.HasOne("OpenGov.Models.Meeting")
+                    b.HasOne("OpenGov.Models.Meeting", "Meeting")
                         .WithMany("Matches")
                         .HasForeignKey("MeetingId");
 
@@ -398,16 +368,16 @@ namespace OpenGovAlerts.Migrations
                     b.Navigation("Source");
                 });
 
-            modelBuilder.Entity("OpenGov.Models.SeenAgendaItem", b =>
+            modelBuilder.Entity("OpenGov.Models.SeenMeeting", b =>
                 {
-                    b.HasOne("OpenGov.Models.AgendaItem", "AgendaItem")
+                    b.HasOne("OpenGov.Models.Meeting", "Meeting")
                         .WithMany()
-                        .HasForeignKey("AgendaItemId")
+                        .HasForeignKey("MeetingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("OpenGov.Models.Search", "Search")
-                        .WithMany("SeenAgendaItems")
+                        .WithMany("SeenMeetings")
                         .HasForeignKey("SearchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

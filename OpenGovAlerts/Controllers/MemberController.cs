@@ -24,11 +24,13 @@ namespace OpenGovAlerts.Controllers
         {
             MemberIndexModel result = new MemberIndexModel();
 
+            DateTime matchesSince = DateTime.UtcNow.Subtract(TimeSpan.FromDays(7));
+
             result.Observers = await db.Observers.Include(o => o.CreatedSearches).ToListAsync();
             result.RecentMatches = await db.Matches
                 .Include(m => m.Search).ThenInclude(s => s.CreatedBy)
                 .Include(m => m.AgendaItem).ThenInclude(a => a.Meeting).ThenInclude(m => m.Source)
-                .Where(m => m.TimeFound > DateTime.UtcNow.Subtract(TimeSpan.FromDays(7)) && result.Observers.Contains(m.Search.CreatedBy))
+                .Where(m => m.TimeFound > matchesSince && result.Observers.Contains(m.Search.CreatedBy))
                 .Take(10)
                 .ToListAsync();
 

@@ -77,6 +77,7 @@ export class Home extends Component {
                     isOpen={this.state.showAddObserverWindow}
                     onRequestClose={this.closeAddObserver}
                     contentLabel="Legg til observatør"
+                    style={{ overlay: { zIndex: 9999 } }}
                 >
                     <h3>Legg til observatør</h3>
                     <AddObserver onSave={this.addObserver} />

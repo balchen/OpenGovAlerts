@@ -4,7 +4,7 @@ import { Button } from 'react-bootstrap';
 
 export class Observer extends Component {
     static renderModel(model) {
-        var searches = model.observer.searches.map(s => <LinkContainer key={s.id} to={'/Observer/' + model.observer.id + '/Search/' + s.id}><Button>{s.name}</Button></LinkContainer>);
+        var searches = model.observer.searches != null ? model.observer.searches.map(s => <LinkContainer key={s.id} to={'/Observer/' + model.observer.id + '/Search/' + s.id}><Button>{s.name}</Button></LinkContainer>) : null;
         return <div>
             <h1>{model.observer.name}</h1>
             {searches}

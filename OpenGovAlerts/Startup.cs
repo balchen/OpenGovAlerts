@@ -24,18 +24,21 @@ namespace OpenGovAlerts
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc()
-                .SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
-                .AddJsonOptions(
-                    options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
-                );
+                .AddMvcOptions(options => { 
+                    options.EnableEndpointRouting = false; 
+                });
 
-            services.AddEntityFrameworkSqlServer();
             services.AddDbContext<AlertsDbContext>(options =>
                 options.UseSqlServer(Configuration["ConnectionString"]));
 
             services.AddTransient<SyncService>();
 
             services.AddHangfire(x => x.UseSqlServerStorage(Configuration["ConnectionString"]));
+
+            services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = 1;
+            });
 
             // In production, the React files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
@@ -45,9 +48,11 @@ namespace OpenGovAlerts
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, AlertsDbContext db, SyncService sync)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, AlertsDbContext db, SyncService sync)
         {
-            if (env.IsDevelopment())
+            bool isDevelopment = env.EnvironmentName.ToLower() == "development";
+
+            if (isDevelopment)
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -57,7 +62,6 @@ namespace OpenGovAlerts
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
 
@@ -66,13 +70,6 @@ namespace OpenGovAlerts
                 StatsPollingInterval = 60,
                 Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
             });
-
-            var options = new BackgroundJobServerOptions
-            {
-                WorkerCount = 1
-            };
-
-            app.UseHangfireServer(options);
 
             app.UseMvc(routes =>
             {
@@ -85,7 +82,7 @@ namespace OpenGovAlerts
             {
                 spa.Options.SourcePath = "ClientApp";
 
-                if (env.IsDevelopment())
+                if (isDevelopment)
                 {
                     spa.UseReactDevelopmentServer(npmScript: "start");
                 }
