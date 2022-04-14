@@ -14,6 +14,7 @@ using OpenGov.Storage;
 using System.Net.Http.Headers;
 using IronPdf;
 using Hangfire.Storage;
+using OpenGov.TaskManagers;
 
 namespace OpenGovAlerts.Services
 {
@@ -50,20 +51,18 @@ namespace OpenGovAlerts.Services
                 foreach (Meeting meeting in meetings)
                 {
                     meeting.Source = source;
-                    await db.Meetings.AddAsync(meeting).ConfigureAwait(false);
+                    db.Meetings.Add(meeting);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
 
                     foreach (AgendaItem item in meeting.AgendaItems)
                     {
-                        item.Meeting = meeting;
-                        await db.AgendaItems.AddAsync(item).ConfigureAwait(false);
-
                         IEnumerable<Document> documents = await scraper.GetDocuments(item).ConfigureAwait(false);
 
                         foreach (Document document in documents)
                         {
                             document.AgendaItem = item;
                             await GetText(document).ConfigureAwait(false);
-                            await db.Documents.AddAsync(document).ConfigureAwait(false);
+                            db.Documents.Add(document);
                             await db.SaveChangesAsync().ConfigureAwait(false);
                         }
                     }
@@ -79,11 +78,11 @@ namespace OpenGovAlerts.Services
                 {
                     foreach (AgendaItem item in meeting.AgendaItems)
                     {
-                        await db.SeenAgendaItems.AddAsync(new SeenAgendaItem { AgendaItem = item, Search = search, DateSeen = DateTime.UtcNow }).ConfigureAwait(false);
+                        db.SeenAgendaItems.Add(new SeenAgendaItem { AgendaItem = item, Search = search, DateSeen = DateTime.UtcNow });
 
                         if (Match(search, item))
                         {
-                            await db.Matches.AddAsync(new Match { AgendaItem = item, Search = search, TimeFound = DateTime.UtcNow }).ConfigureAwait(false);
+                            db.Matches.Add(new Match { AgendaItem = item, Search = search, TimeFound = DateTime.UtcNow });
                         }
                     }
                 }
@@ -102,11 +101,9 @@ namespace OpenGovAlerts.Services
                 .GroupBy(m => m.Subscriber)
                 .ToListAsync().ConfigureAwait(false))
             {
-                //await UploadToStorage(toNotify.Key, toNotify).ConfigureAwait(false);
-                //await AddToTaskManager(toNotify.Key, toNotify).ConfigureAwait(false);
+                var matches = toNotify.Select(m => m.Match);
 
                 Smtp smtp = new Smtp();
-                var matches = toNotify.Select(m => m.Match);
                 await smtp.Notify(matches, toNotify.Key).ConfigureAwait(false);
 
                 foreach (Match match in matches)
@@ -115,12 +112,23 @@ namespace OpenGovAlerts.Services
                 }
 
                 await db.SaveChangesAsync().ConfigureAwait(false);
+
+                //await UploadToStorage(toNotify.Key, matches).ConfigureAwait(false);
+                //await AddToTaskManager(toNotify.Key, matches).ConfigureAwait(false);
             }
         }
 
-        private async Task AddToTaskManager(Observer key, IEnumerable<Match> toNotify)
+        private async Task AddToTaskManager(Observer observer, IEnumerable<Match> matches)
         {
-            throw new NotImplementedException();
+            foreach (TaskManagerConfig config in observer.TaskManager)
+            {
+                ITaskManager taskManager = GetTaskManager(config.Url);
+
+                foreach (Match match in matches)
+                {
+                    await taskManager.AddTask(match.AgendaItem);
+                }
+            }
         }
 
         private async Task UploadToStorage(Observer observer, IEnumerable<Match> matches)
@@ -147,7 +155,7 @@ namespace OpenGovAlerts.Services
 
             foreach (Document document in item.Documents)
             {
-                if (document.Text != null && document.Text.Contains(search.Phrase, StringComparison.CurrentCultureIgnoreCase))
+                if (document.Title != null && document.Title.Contains(search.Phrase, StringComparison.CurrentCultureIgnoreCase))
                     return true;
             }
 
@@ -214,7 +222,7 @@ namespace OpenGovAlerts.Services
                 case "sru":
                     return new SRU(new Uri(parameters));
                 case "elements":
-                    return new Elements(new Uri(parameters));
+                    return new Elements(parameters);
                 default:
                     throw new ArgumentException("Invalid source URL " + sourceUrl);
             }
@@ -232,6 +240,20 @@ namespace OpenGovAlerts.Services
                     return new LocalDisk(uri.PathAndQuery);
                 default:
                     throw new ArgumentException("Unknown storage provider URL " + url);
+            }
+        }
+
+        public static ITaskManager GetTaskManager(string url)
+        {
+            Uri uri = new Uri(url);
+
+            switch (uri.Scheme)
+            {
+                case "trello":
+                    string[] boardAndListId = uri.AbsolutePath.Split('/');
+                    return new Trello(uri.Host, uri.UserInfo, boardAndListId[0], boardAndListId[1]);
+                default:
+                    throw new ArgumentException("Unknown task manager URL " + url);
             }
         }
     }

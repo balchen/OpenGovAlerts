@@ -18,6 +18,11 @@ export class AddObserver extends Component {
     }
 
     render() {
-        return <div><div><label>Navn:</label><input type="text" value={this.state.name} onChange={e => this.setState({ name: e.target.value })} /></div><button onClick={this.save}>Lagre</button></div>;
+        return <div>
+            <div>
+                <label>Navn:</label><input type="text" value={this.state.name} onChange={e => this.setState({ name: e.target.value })} />
+            </div>
+            <button onClick={this.save}>Lagre</button>
+        </div>;
     }
 }

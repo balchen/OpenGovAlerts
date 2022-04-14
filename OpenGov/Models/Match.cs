@@ -1,9 +1,11 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace OpenGov.Models
 {
     public class Match
     {
+        [Key]
         public int Id { get; set; }
         public Search Search { get; set;}
         public AgendaItem AgendaItem { get; set; }

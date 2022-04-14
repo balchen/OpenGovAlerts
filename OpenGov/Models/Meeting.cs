@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace OpenGov.Models
 {
     public class Meeting
     {
+        [Key]
         public int Id { get; set; }
         public Source Source { get; set; }
         public string ExternalId { get; set; }

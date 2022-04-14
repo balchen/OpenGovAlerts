@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace OpenGov.Models
 {
     public class Observer
     {
+        [Key]
         public int Id { get; set; }
         public string Name { get; set; }
         public string[] Emails { get; set; }

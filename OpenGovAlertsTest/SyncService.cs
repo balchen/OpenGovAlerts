@@ -22,7 +22,7 @@ namespace OpenGovAlertsTests
             var stavanger = db.Sources.Add(new Source { Name = "Stavanger kommune", Url = "opengov:stavanger" }).Entity;
             var sandnes = db.Sources.Add(new Source { Name = "Sandnes kommune", Url = "opengov:sandnes" }).Entity;
 
-            Observer slf = new Observer { Name = "SLF Nord-Jæren og Ryfylke", Emails = new string[] { "nord-jaren@syklistene.no" }, SmtpServer = "mail.syklistene.no", SmtpPassword = "Hverdagssykling123", SmtpSender = "nord-jaren@syklistene.no", SmtpPort = 587, SmtpUseSsl = true };
+            Observer slf = new Observer { Name = "Rogaland syklistforening", Emails = new string[] { "post@rogalandsyklistforening.no" }, SmtpServer = "mail.syklistene.no", SmtpPassword = "", SmtpSender = "nord-jaren@syklistene.no", SmtpPort = 587, SmtpUseSsl = true };
 
             db.Observers.Add(slf);
 

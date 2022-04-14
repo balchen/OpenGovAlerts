@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace OpenGov.Models
 {
     public class AgendaItem
     {
+        [Key]
         public int Id { get; set; }
         public DateTime Retrieved { get; set; }
 

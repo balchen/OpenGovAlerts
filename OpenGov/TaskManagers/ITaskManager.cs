@@ -6,6 +6,6 @@ namespace OpenGov.TaskManagers
 {
     public interface ITaskManager
     {
-        Task<Uri> AddTask(Meeting meeting);
+        Task<Uri> AddTask(AgendaItem agendaItem);
     }
 }

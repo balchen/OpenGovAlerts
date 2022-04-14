@@ -8,7 +8,7 @@
         public string JupiterUrl { get; set; }
         public string SRUUrl { get; set; }
         public string ACOSUrl { get; set; }
-        public string ElementsUrl { get; set; }
+        public string ElementsTenantId { get; set; }
         public string NotifyEmail { get; set; }
     }
 }
