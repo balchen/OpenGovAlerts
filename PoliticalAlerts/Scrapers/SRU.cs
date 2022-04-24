@@ -58,7 +58,7 @@ namespace PoliticalAlerts.Scrapers
 
                 foreach (dynamic boardMeeting in JArray.Parse(boardMeetingsJson))
                 {
-                    string meetingUrl = string.Format("https://prokomresources.prokomcdn.no/plugins/sru-v2/iframe-app/app.html?url={2}&v=1.01#se:mote/moteid:{1}/utvalgid:{0}", board.Id, boardMeeting.Id, baseUrl.ToString());
+                    string meetingUrl = string.Format("{2}/app#se:mote/moteid:{1}/utvalgid:{0}", board.Id, boardMeeting.Id, baseUrl.ToString());
 
                     if (boardMeeting.Behandlinger != null)
                     {
