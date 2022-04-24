@@ -1,0 +1,13 @@
+version: '3.4'
+
+services:
+  politicalalertsweb:
+    image: ${DOCKER_REGISTRY-}politicalalertsweb
+    build:
+      context: .
+      dockerfile: PoliticalAlertsWeb/Dockerfile
+    networks:
+      - political-alerts-net
+networks:
+  political-alerts-net:
+    external: true

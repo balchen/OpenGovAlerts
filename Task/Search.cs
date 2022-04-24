@@ -1,4 +1,4 @@
-﻿namespace OpenGovAlerts
+﻿namespace PoliticalAlertsTask
 {
     public class Search
     {

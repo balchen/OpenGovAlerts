@@ -1,0 +1,30 @@
+version: '3.4'
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+    container_name: political-alerts-database
+    restart: unless-stopped
+    ports:
+      - "3102:1433"
+    networks:
+      political-alerts-net:
+        aliases:
+          - db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=TestDatabase2022
+      - MSSQL_PID=Express
+    volumes:
+      - type: bind
+        source: ./Data
+        target: /var/opt/mssql/data
+      - type: bind
+        source: ./Logs
+        target: /var/opt/mssql/log
+      - type: bind
+        source: ./Secrets
+        target: /var/opt/mssql/secrets         
+networks:
+  political-alerts-net:
+    external: true

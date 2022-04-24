@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <RootNamespace>OpenGovAlerts</RootNamespace>
     <AssemblyName>OpenGovAlerts</AssemblyName>
@@ -13,11 +13,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.10" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OpenGov\OpenGov.csproj" />
+    <ProjectReference Include="..\PoliticalAlertsWeb\PoliticalAlertsWeb.csproj" />
+    <ProjectReference Include="..\PoliticalAlerts\PoliticalAlerts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

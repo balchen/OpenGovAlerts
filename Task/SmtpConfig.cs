@@ -1,10 +1,7 @@
-﻿using OpenGov.Models;
-
-namespace OpenGovAlerts
+﻿namespace PoliticalAlertsTask
 {
     public class SmtpConfig
     {
-        public Observer Observer { get; set; }
         public string Sender { get; set; }
         public string Password { get; set; }
         public string Server { get; set; }

@@ -1,7 +1,7 @@
-﻿using OpenGov.Models;
+﻿using PoliticalAlerts.Models;
 using System.Collections.Generic;
 
-namespace OpenGovAlerts
+namespace PoliticalAlertsTask
 {
     public class Config
     {

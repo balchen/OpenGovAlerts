@@ -1,6 +1,8 @@
-﻿using Newtonsoft.Json;
-using OpenGov.Models;
-using OpenGov.Scrapers;
+﻿using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using PoliticalAlerts.Models;
+using PoliticalAlerts.Scrapers;
+using PoliticalAlertsWeb.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +15,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OpenGovAlerts
+namespace PoliticalAlertsTask
 {
     class Program
     {
@@ -41,12 +43,148 @@ namespace OpenGovAlerts
         {
             var config = JsonConvert.DeserializeObject<Config>(await File.ReadAllTextAsync("config.json"));
 
+            if (args.Length == 2 && args[0] == "migrate")
+            {
+                await Migrate(config, args[1]);
+            }
+            else
+            {
+                await Run(config);
+            }
+        }
+
+        static async Task Migrate(Config config, string connectionString)
+        {
+            AlertsDbContext db = new AlertsDbContext(new DbContextOptionsBuilder().UseSqlServer(connectionString).Options);
+
+            await db.UpdateSchema();
+
+            db.SeenAgendaItems.RemoveRange(db.SeenAgendaItems);
+            db.Matches.RemoveRange(db.Matches);
+            db.AgendaItems.RemoveRange(db.AgendaItems);
+            db.ObserverSearches.RemoveRange(db.ObserverSearches);
+            db.SearchSources.RemoveRange(db.SearchSources);
+            db.Searches.RemoveRange(db.Searches);
+            db.Observers.RemoveRange(db.Observers);
+            db.Sources.RemoveRange(db.Sources);
+
+            await db.SaveChangesAsync();
+
+            Dictionary<string, Source> sourcesByUrl = new Dictionary<string, Source>();
+            Dictionary<string, Source> sourcesById = new Dictionary<string, Source>();
+            Dictionary<string, Observer> observers = new Dictionary<string, Observer>();
+            Dictionary<string, string> sourceObservers = new Dictionary<string, string>();
+
+            foreach (Client client in config.Clients)
+            {
+                string sourceUrl = "";
+
+                if (!string.IsNullOrEmpty(client.OpenGovId))
+                    sourceUrl = "opengov:" + client.OpenGovId;
+                else if (!string.IsNullOrEmpty(client.JupiterUrl))
+                    sourceUrl = "jupiter:" + client.JupiterUrl;
+                else if (!string.IsNullOrEmpty(client.SRUUrl))
+                    sourceUrl = "sru:" + client.SRUUrl;
+                else if (!string.IsNullOrEmpty(client.ACOSUrl))
+                    sourceUrl = "acos:" + client.ACOSUrl;
+                else if (!string.IsNullOrEmpty(client.ElementsTenantId))
+                    sourceUrl = "elements:" + client.ElementsTenantId;
+
+                if (!sourcesByUrl.ContainsKey(sourceUrl))
+                {
+                    Source source = new Source
+                    {
+                        Name = client.Name,
+                        Url = sourceUrl
+                    };
+
+                    source = db.Add(source).Entity;
+
+                    sourcesByUrl.Add(sourceUrl, source);
+                    sourcesById.Add(client.Id, source);
+                }
+                else
+                {
+                    Source source = sourcesByUrl[sourceUrl];
+                    sourcesById.Add(client.Id, source);
+                }
+
+                if (!observers.ContainsKey(client.NotifyEmail))
+                {
+                    observers.Add(client.NotifyEmail, db.Add(new Observer { 
+                        Emails = new string[] { client.NotifyEmail },  
+                        SmtpServer = config.Smtp.Server,
+                        SmtpPort = config.Smtp.Port,
+                        SmtpSender = config.Smtp.Sender,
+                        SmtpPassword = config.Smtp.Password,
+                        SmtpUseSsl = config.Smtp.UseSsl
+                    }).Entity);
+                }
+
+                sourceObservers.Add(client.Id, client.NotifyEmail);
+            }
+
+            await db.SaveChangesAsync();
+
+            foreach (Search search in config.Searches)
+            {
+                var dbSearch = db.Searches.Add(new PoliticalAlerts.Models.Search {
+                    Name = search.Name,
+                    Phrase = search.Phrase,
+                    Start = DateTime.UtcNow
+                }).Entity;
+
+                await db.SaveChangesAsync();
+                
+                Observer observer;
+                IEnumerable<string> sources;
+
+                if (search.ClientId == "*")
+                {
+                    sources = sourcesById.Keys;
+                }
+                else
+                {
+                    sources = search.ClientId.Split(',');
+                }
+
+                foreach (string sourceId in sources)
+                {
+                    Source source = sourcesById[sourceId];
+
+                    db.SearchSources.Add(new SearchSource
+                    {
+                        Search = dbSearch,
+                        Source = source
+                    });
+
+                    await db.SaveChangesAsync();
+
+                    observer = observers[sourceObservers[sourceId]];
+
+                    if (!db.ObserverSearches.Any(os => os.SearchId == dbSearch.Id && os.ObserverId == observer.Id))
+                    {
+                        db.ObserverSearches.Add(new ObserverSearch
+                        {
+                            Search = dbSearch,
+                            Observer = observers[sourceObservers[sourceId]],
+                            Activated = DateTime.UtcNow
+                        });
+
+                        await db.SaveChangesAsync();
+                    }
+                }
+            }
+        }
+
+        static async Task Run(Config config)
+        {
             foreach (Client client in config.Clients)
             {
                 IScraper scraper = null;
 
                 if (!string.IsNullOrEmpty(client.OpenGovId))
-                    scraper = new OpenGov.Scrapers.OpenGov(client.OpenGovId);
+                    scraper = new OpenGov(client.OpenGovId);
                 else if (!string.IsNullOrEmpty(client.JupiterUrl))
                     scraper = new Jupiter(client.JupiterUrl);
                 else if (!string.IsNullOrEmpty(client.SRUUrl))

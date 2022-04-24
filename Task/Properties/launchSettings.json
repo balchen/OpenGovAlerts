@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Task": {
+      "commandName": "Project",
+      "commandLineArgs": "migrate \"Server=localhost,3102;Database=PoliticalAlerts;User Id=sa;Password=TestDatabase2022;MultipleActiveResultSets=true\"",
+      "workingDirectory": "C:\\Users\\balchen\\Documents\\Utvikling\\OpenGovAlerts\\data"
+    }
+  }
+}
