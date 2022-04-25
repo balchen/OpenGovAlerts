@@ -14,6 +14,7 @@ namespace PoliticalAlerts.Models
         public string ExternalId { get; set; }
         public string Number { get; set; }
         public string Title { get; set; }
+        public string CaseNumber { get; set; }
         public Uri Url { get; set; }
 
         public Uri DocumentsUrl { get; set; }

@@ -28,5 +28,17 @@ namespace PoliticalAlertsTests
 
             Assert.IsTrue(documents.Count > 0);
         }
+
+        [TestMethod]
+        public async Task GetCaseDocuments()
+        {
+            var caseNumber = "16/01297";
+
+            PoliticalAlerts.Scrapers.OpenGov scraper = new PoliticalAlerts.Scrapers.OpenGov("STAVANGER");
+            
+            var documents = new List<Document>(await scraper.GetCaseDocuments(caseNumber));
+
+            Assert.IsTrue(documents.Count > 0);
+        }
     }
 }

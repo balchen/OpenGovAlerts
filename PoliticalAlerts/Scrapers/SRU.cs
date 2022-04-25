@@ -19,6 +19,11 @@ namespace PoliticalAlerts.Scrapers
             http.BaseAddress = baseUrl;
         }
 
+        public Task<IEnumerable<Document>> GetCaseDocuments(string caseNumber)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<IEnumerable<Document>> GetDocuments(AgendaItem agendaItem)
         {
             string agendaItemJson = await http.GetStringAsync(string.Format("/api/utvalg/{0}/moter/{1}/behandlinger/", agendaItem.Meeting.BoardId, agendaItem.Meeting.ExternalId));

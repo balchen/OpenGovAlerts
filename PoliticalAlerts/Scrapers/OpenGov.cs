@@ -3,6 +3,7 @@ using PoliticalAlerts.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
@@ -11,24 +12,24 @@ namespace PoliticalAlerts.Scrapers
 {
     public class OpenGov : IScraper
     {
-        private string clientId;
+        private readonly string clientId;
+        private readonly HttpClient http;
 
         public OpenGov(string clientId)
         {
             this.clientId = clientId;
+            this.http = new HttpClient();
+            http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
         }
 
         public async Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenAgendaItems)
         {
-            HttpClient http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
-
-            List<Meeting> meetings = await FindNew(seenAgendaItems, http);
+            List<Meeting> meetings = await FindNew(seenAgendaItems);
 
             return meetings;
         }
 
-        private async Task<List<Meeting>> FindNew(ISet<string> seenAgendaItems, HttpClient http)
+        private async Task<List<Meeting>> FindNew(ISet<string> seenAgendaItems)
         {
             Uri url = new Uri(string.Format("http://opengov.cloudapp.net/Meetings/{0}", clientId));
 
@@ -55,7 +56,7 @@ namespace PoliticalAlerts.Scrapers
 
                     DateTime meetingDate = DateTime.ParseExact(HttpUtility.HtmlDecode(meeting.SelectSingleNode("descendant::div[@class='meetingDate']/span").InnerText), "dd.MM.yyyy", CultureInfo.CurrentCulture);
 
-                    Meeting newMeeting = await GetMeetingDetails(seenAgendaItems, meetingUrl, meetingId, meetingDate, clientId, http);
+                    Meeting newMeeting = await GetMeetingDetails(seenAgendaItems, meetingUrl, meetingId, meetingDate, clientId);
 
                     if (newMeeting != null)
                         newMeetings.Add(newMeeting);
@@ -65,7 +66,7 @@ namespace PoliticalAlerts.Scrapers
             return newMeetings;
         }
 
-        private async Task<Meeting> GetMeetingDetails(ISet<string> seenAgendaItems, string meetingUrl, string meetingId, DateTime meetingDate, string clientId, HttpClient http)
+        private async Task<Meeting> GetMeetingDetails(ISet<string> seenAgendaItems, string meetingUrl, string meetingId, DateTime meetingDate, string clientId)
         {
             string html = await http.GetStringAsync(meetingUrl);
 
@@ -99,6 +100,13 @@ namespace PoliticalAlerts.Scrapers
 
                         if (!seenAgendaItems.Contains(url))
                         {
+                            Uri detailsUrl = new Uri(string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/LoadAgendaItemDetail/{1}", clientId, id));
+
+                            string detailsHtml = await http.GetStringAsync(detailsUrl);
+
+                            HtmlDocument detailsDoc = new HtmlDocument();
+                            doc.LoadHtml(detailsHtml);
+
                             meeting.AgendaItems.Add(new AgendaItem
                             {
                                 Meeting = meeting,
@@ -119,23 +127,93 @@ namespace PoliticalAlerts.Scrapers
 
         public async Task<IEnumerable<Document>> GetDocuments(AgendaItem item)
         {
-            return await GetAgendaItemDocumentUrls(clientId, item.ExternalId);
+            (IEnumerable<Document> documents, string caseNumber) = await GetAgendaItemDetails(item.ExternalId);
+
+            return documents;
         }
 
-        private async Task<IEnumerable<Document>> GetAgendaItemDocumentUrls(string clientId, string agendaItemId)
+        public async Task<IEnumerable<Document>> GetCaseDocuments(string caseNumber)
         {
-            Uri url = new Uri(string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/LoadAgendaItemDetail/{1}", clientId, agendaItemId));
+            Uri url = new Uri(string.Format("https://opengov.360online.com/Cases/{0}?q={1}", this.clientId, caseNumber));
+
+            string html = await http.GetStringAsync(url);
+
+            HtmlDocument doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            var linkNodes = doc.DocumentNode.SelectNodes("//a[descendant::div[@class='caseTypeLink searchPageCaseheader']]");
+
+            if (linkNodes == null || linkNodes.Count != 1)
+                return null;
+
+            var linkNode = linkNodes[0];
+
+            var caseUrl = new Uri(url, linkNode.Attributes["href"].Value);
+            var caseId = linkNode.Attributes["href"].Value.Split('/').Last();
+
+            html = await http.GetStringAsync(caseUrl);
+
+            doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            List<Document> documents = new List<Document>();
+
+            foreach (var documentNode in doc.DocumentNode.SelectNodes("//div[@class='caseDocumentList']/ul/li/a[@class='accordion']"))
+            {
+                string title = documentNode.SelectSingleNode("//div[@class='accordionTitle']").InnerText;
+                var detailsNode = documentNode.NextSibling.NextSibling;
+                string id = detailsNode.Attributes["id"].Value;
+                string type = detailsNode.SelectSingleNode("descendant::div[@class='documentDetails']//div[@class='detailsList' and descendant::span='Dokumenttype']//div[@class='documentDetailContent']").InnerText;
+                Uri documentUrl = new Uri(string.Format("https://opengov.360online.com/Cases/stavanger/Case/Details/{0}?documentID={1}", caseId, id));
+
+                DocumentType docType = DocumentType.Unclassified;
+
+                switch (type.ToLower())
+                {
+                    case "vedtak":
+                        docType = DocumentType.Decision;
+                        break;
+                    case "dokument inn":
+                        docType = DocumentType.Inbound;
+                        break;
+                    case "internt dokument med oppfølging":
+                        docType = DocumentType.Inbound;
+                        break;
+                    case "saksframlegg/innstilling":
+                        docType = DocumentType.Proposal;
+                        break;
+                    case "dokument ut":
+                    case "e-post ut":
+                        docType = DocumentType.Outbound;
+                        break;
+                }
+
+                documents.Add(new Document
+                {
+                    Title = title,
+                    Type = type,
+                    ParsedType = docType,
+                    Url = documentUrl
+                });
+            }
+
+            return documents;
+        }
+
+        private async Task<(IEnumerable<Document>, string)> GetAgendaItemDetails(string agendaItemId)
+        {
+            Uri url = new Uri(string.Format("http://opengov.cloudapp.net/Meetings/{0}/Meetings/LoadAgendaItemDetail/{1}", this.clientId, agendaItemId));
 
             HttpClient http = new HttpClient();
 
             string html = await http.GetStringAsync(url);
 
-            HtmlDocument agendaItemDocuments = new HtmlDocument();
-            agendaItemDocuments.LoadHtml(html);
+            HtmlDocument details = new HtmlDocument();
+            details.LoadHtml(html);
 
             List<Document> documents = new List<Document>();
 
-            foreach (var documentLink in agendaItemDocuments.DocumentNode.SelectNodes("//a"))
+            foreach (var documentLink in details.DocumentNode.SelectNodes("//a"))
             {
                 Document document = new Document();
                 document.Url = new Uri(url, documentLink.Attributes["href"].Value);
@@ -150,7 +228,11 @@ namespace PoliticalAlerts.Scrapers
                 }
             }
 
-            return documents;
+            var caseNumberNode = details.DocumentNode.SelectSingleNode("descendant::div[@class='detailsSection']/div[@class='details']/div[@class='detailsList' and descendant::div[contains(., 'Saksnr')]]/div[@class='detailContent']");
+
+            string caseNumber = caseNumberNode?.InnerText;
+
+            return (documents, caseNumber);
         }
     }
 }

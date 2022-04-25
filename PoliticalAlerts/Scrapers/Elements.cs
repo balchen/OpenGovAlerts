@@ -108,5 +108,10 @@ namespace PoliticalAlerts.Scrapers
                 return new List<Document>();
             }
         }
+
+        public Task<IEnumerable<Document>> GetCaseDocuments(string caseNumber)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
