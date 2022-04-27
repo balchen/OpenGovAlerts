@@ -117,7 +117,7 @@ namespace PoliticalAlerts.Scrapers
                 if (!string.IsNullOrEmpty(caseLinkUrl))
                 {
                     Uri caseLinkUri = new Uri(caseLinkUrl);
-                    var queryParams = HttpUtility.ParseQueryString(caseLinkUri.Query));
+                    var queryParams = HttpUtility.ParseQueryString(caseLinkUri.Query);
                     caseId = queryParams.Get("arkivsakid");
                 }
 
@@ -175,7 +175,7 @@ namespace PoliticalAlerts.Scrapers
             foreach (var journalNode in caseDoc.DocumentNode.SelectNodes("//li[descendant::div[@class='det']]"))
             {
                 var headerNode = journalNode.SelectSingleNode("descendant::div[@class='det']");
-                var linkNode = headerNode.SelectSingleNode("descendant::/h3/a");
+                var linkNode = headerNode.SelectSingleNode("descendant::h3/a");
                 Uri journalUrl = new Uri(url, HttpUtility.HtmlDecode(linkNode.Attributes["href"].Value));
                 string journalId = HttpUtility.ParseQueryString(journalUrl.Query).Get("journalpostid");
                 string journalTitle = HttpUtility.HtmlDecode(linkNode.InnerText.Trim());
@@ -213,7 +213,8 @@ namespace PoliticalAlerts.Scrapers
                     To = journalTo ?? journalUnit,
                     Type = journalType,
                     ParsedType = parsedType,
-                    Url = journalUrl
+                    Url = journalUrl,
+                    Documents = new List<Document>()
                 };
 
                 entries.Add(entry);

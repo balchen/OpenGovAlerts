@@ -14,7 +14,7 @@ namespace PoliticalAlertsTests
         [TestMethod]
         public async Task FindNew()
         {
-            IScraper scraper = new PoliticalAlerts.Scrapers.Elements("971045698");
+            PoliticalAlerts.Scrapers.Elements scraper = new PoliticalAlerts.Scrapers.Elements("971045698");
 
             var meetings = await scraper.GetNewMeetings(new HashSet<string>());
 
@@ -29,6 +29,19 @@ namespace PoliticalAlertsTests
             var documents = new List<Document>(await scraper.GetDocuments(meeting.AgendaItems[0]));
 
             Assert.IsTrue(documents.Count > 0);
+        }
+
+        [TestMethod]
+        public async Task GetCaseDocuments()
+        {
+            var caseNumber = "31260";
+
+            PoliticalAlerts.Scrapers.Elements scraper = new PoliticalAlerts.Scrapers.Elements("971045698");
+
+            var entries = new List<JournalEntry>(await scraper.GetCaseJournal(caseNumber));
+
+            Assert.IsTrue(entries.Count > 0);
+            Assert.IsTrue(entries[0].Documents.Count > 0);
         }
     }
 }
