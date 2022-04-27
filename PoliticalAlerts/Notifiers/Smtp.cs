@@ -65,6 +65,54 @@ namespace PoliticalAlerts.Notifiers
             await smtp.SendMailAsync(email);
         }
 
+        public async Task Notify(IEnumerable<ConsultationMatch> matches, Observer observer)
+        {
+            StringBuilder body = new StringBuilder("<html><head><style type=\"text/css\">h4 { margin-top: 1em; margin-bottom: 0.5em; } h3 { margin-bottom: 0; }</style></head><body>");
+
+            foreach (var searches in matches.GroupBy(m => m.Search))
+            {
+                body.AppendFormat("<h3>Nye møter har dukket opp på kalenderen for {0}</h3>\r\n\r\n<table>", searches.Key.Name);
+
+                foreach (var agendaItem in searches.GroupBy(m => m.JournalEntry.AgendaItem))
+                {
+                    body.AppendFormat("<tr><td colspan=\"3\"><h4>{0}</h4></td></tr>\r\n", agendaItem.Key.Title);
+
+                    foreach (var match in agendaItem.OrderBy(m => m.JournalEntry.Date))
+                    {
+                        body.AppendFormat("<tr><td><a href=\"{1}\">{0}</a></td><td><a href=\"{1}\">{2}</a></td></tr>\r\n", match.JournalEntry.Title, match.JournalEntry.Url, match.JournalEntry.Date?.ToString("dd.MM.yyyy"), match.Excerpt);
+                    }
+                }
+
+                body.Append("</table>");
+            }
+
+            body.Append("</body></html>");
+
+            string bodyString = body.ToString();
+
+            MailMessage email = new MailMessage();
+            email.From = new MailAddress(observer.SmtpSender);
+            foreach (string to in observer.Emails)
+                email.To.Add(new MailAddress(to, observer.Name));
+            email.Subject = "Varsel om høring til " + observer.Name;
+
+            email.Body = bodyString;
+            email.IsBodyHtml = true;
+
+            SmtpClient smtp = new SmtpClient(observer.SmtpServer, observer.SmtpPort);
+            smtp.UseDefaultCredentials = false;
+            smtp.Credentials = new NetworkCredential(observer.SmtpSender, observer.SmtpPassword);
+
+            if (observer.SmtpUseSsl)
+            {
+                smtp.EnableSsl = true;
+
+                NEVER_EAT_POISON_Disable_CertificateValidation();
+            }
+
+            await smtp.SendMailAsync(email);
+        }
+
         [Obsolete("Do not use this in Production code!!!", false)]
         static void NEVER_EAT_POISON_Disable_CertificateValidation()
         {

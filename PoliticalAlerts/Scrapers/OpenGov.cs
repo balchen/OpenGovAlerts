@@ -132,7 +132,7 @@ namespace PoliticalAlerts.Scrapers
             return documents;
         }
 
-        public async Task<IEnumerable<Document>> GetCaseDocuments(string caseNumber)
+        public async Task<IEnumerable<JournalEntry>> GetCaseJournal(string caseNumber)
         {
             Uri url = new Uri(string.Format("https://opengov.360online.com/Cases/{0}?q={1}", this.clientId, caseNumber));
 
@@ -156,48 +156,70 @@ namespace PoliticalAlerts.Scrapers
             doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-            List<Document> documents = new List<Document>();
+            List<JournalEntry> entries = new List<JournalEntry>();
 
-            foreach (var documentNode in doc.DocumentNode.SelectNodes("//div[@class='caseDocumentList']/ul/li/a[@class='accordion']"))
+            foreach (var journalNode in doc.DocumentNode.SelectNodes("//div[@class='caseDocumentList']/ul/li/a[@class='accordion']"))
             {
-                string title = documentNode.SelectSingleNode("//div[@class='accordionTitle']").InnerText;
-                var detailsNode = documentNode.NextSibling.NextSibling;
+                string title = HttpUtility.HtmlDecode(journalNode.SelectSingleNode("descendant::div[@class='accordionTitle']").InnerText.Trim());
+                var detailsNode = journalNode.NextSibling.NextSibling;
                 string id = detailsNode.Attributes["id"].Value;
                 string type = detailsNode.SelectSingleNode("descendant::div[@class='documentDetails']//div[@class='detailsList' and descendant::span='Dokumenttype']//div[@class='documentDetailContent']").InnerText;
-                Uri documentUrl = new Uri(string.Format("https://opengov.360online.com/Cases/stavanger/Case/Details/{0}?documentID={1}", caseId, id));
+                Uri entryUrl = new Uri(string.Format("https://opengov.360online.com/Cases/stavanger/Case/Details/{0}?documentID={1}", caseId, id));
+                string from = HttpUtility.HtmlDecode(detailsNode.SelectSingleNode("descendant::div[@class='documentDetails']//div[@class='detailsList' and descendant::span='Avsender']//div[@class='documentDetailContent']")?.InnerText.Trim());
+                string to = HttpUtility.HtmlDecode(detailsNode.SelectSingleNode("descendant::div[@class='documentDetails']//div[@class='detailsList' and descendant::span='Mottaker']//div[@class='documentDetailContent']")?.InnerText.Trim());
 
-                DocumentType docType = DocumentType.Unclassified;
+                JournalType journalType = JournalType.Unclassified;
 
                 switch (type.ToLower())
                 {
                     case "vedtak":
-                        docType = DocumentType.Decision;
+                        journalType = JournalType.Decision;
                         break;
                     case "dokument inn":
-                        docType = DocumentType.Inbound;
+                    case "e-post inn":
+                        journalType = JournalType.Inbound;
                         break;
                     case "internt dokument med oppfølging":
-                        docType = DocumentType.Inbound;
+                        journalType = JournalType.Inbound;
                         break;
                     case "saksframlegg/innstilling":
-                        docType = DocumentType.Proposal;
+                        journalType = JournalType.Proposal;
                         break;
                     case "dokument ut":
                     case "e-post ut":
-                        docType = DocumentType.Outbound;
+                        journalType = JournalType.Outbound;
                         break;
                 }
 
-                documents.Add(new Document
+                var entry = new JournalEntry
                 {
                     Title = title,
                     Type = type,
-                    ParsedType = docType,
-                    Url = documentUrl
-                });
+                    ParsedType = journalType,
+                    Url = entryUrl,
+                    From = from,
+                    To = to,
+                    Documents = new List<Document>()
+                };
+
+                entries.Add(entry);
+
+                foreach (var documentNode in detailsNode.SelectNodes("descendant::li[@class='fileLink ']/a"))
+                {
+                    Uri docUrl = new Uri(url, documentNode.Attributes["href"].Value);
+                    string docTitle = HttpUtility.HtmlDecode(documentNode.SelectSingleNode("descendant::div[@class='fileNameDetail']").InnerText.Trim());
+                    string docType = documentNode.SelectSingleNode("descendant::div[@class='fileDocumentCategory']").InnerText.Trim();
+
+                    entry.Documents.Add(new Document
+                    {
+                        Url = docUrl,
+                        Title = docTitle,
+                        Type = docType
+                    });
+                }
             }
 
-            return documents;
+            return entries;
         }
 
         private async Task<(IEnumerable<Document>, string)> GetAgendaItemDetails(string agendaItemId)

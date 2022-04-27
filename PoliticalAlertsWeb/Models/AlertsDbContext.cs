@@ -21,6 +21,12 @@ namespace PoliticalAlertsWeb.Models
         public DbSet<SearchSource> SearchSources { get; set; }
         public DbSet<SeenAgendaItem> SeenAgendaItems { get; set; }
         public DbSet<Match> Matches { get; set; }
+        public DbSet<JournalEntry> JournalEntries { get; set; }
+        public DbSet<ConsultationSearch> ConsultationSearches { get; set; }
+        public DbSet<ObserverConsultationSearch> ObserverConsultationSearches { get; set; }
+        public DbSet<ConsultationSearchSource> ConsultationSearchSources { get; set; }
+        public DbSet<SeenJournalEntry> SeenJournalEntries { get; set; }
+        public DbSet<ConsultationMatch> ConsultationMatches { get; set; }
 
         public async virtual Task UpdateSchema()
         {
@@ -72,6 +78,15 @@ namespace PoliticalAlertsWeb.Models
             modelBuilder.Entity<SeenAgendaItem>()
                 .HasKey(m => new { m.SearchId, m.AgendaItemId });
 
+            modelBuilder.Entity<ObserverConsultationSearch>()
+                .HasKey(s => new { s.ObserverId, s.ConsultationSearchId });
+
+            modelBuilder.Entity<ConsultationSearchSource>()
+                .HasKey(s => new { s.ConsultationSearchId, s.SourceId });
+
+            modelBuilder.Entity<SeenJournalEntry>()
+                .HasKey(m => new { m.ConsultationSearchId, m.JournalEntryId });
+
             modelBuilder.Entity<Search>()
                 .HasMany(s => s.Sources)
                 .WithOne(s => s.Search);
@@ -106,6 +121,15 @@ namespace PoliticalAlertsWeb.Models
             modelBuilder.Entity<Document>()
                 .Property(d => d.Url)
                 .HasConversion(v => v.ToString(), v => new Uri(v));
+
+            modelBuilder.Entity<JournalEntry>()
+                .HasMany(s => s.Documents)
+                .WithOne(d => d.JournalEntry);
+
+            modelBuilder.Entity<JournalEntry>()
+                .Property(e => e.Url)
+                .HasConversion(v => v.ToString(), v => new Uri(v));
+
         }
     }
 }

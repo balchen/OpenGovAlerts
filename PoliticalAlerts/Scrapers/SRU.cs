@@ -19,9 +19,9 @@ namespace PoliticalAlerts.Scrapers
             http.BaseAddress = baseUrl;
         }
 
-        public Task<IEnumerable<Document>> GetCaseDocuments(string caseNumber)
+        public Task<IEnumerable<JournalEntry>> GetCaseJournal(string caseNumber)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IEnumerable<JournalEntry>>(new List<JournalEntry>());
         }
 
         public async Task<IEnumerable<Document>> GetDocuments(AgendaItem agendaItem)

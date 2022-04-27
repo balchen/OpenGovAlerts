@@ -8,6 +8,6 @@ namespace PoliticalAlerts.Scrapers
     {
         Task<IEnumerable<Meeting>> GetNewMeetings(ISet<string> seenMeetings);
         Task<IEnumerable<Document>> GetDocuments(AgendaItem item);
-        Task<IEnumerable<Document>> GetCaseDocuments(string caseNumber);
+        Task<IEnumerable<JournalEntry>> GetCaseJournal(string caseNumber);
     }
 }

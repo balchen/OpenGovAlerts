@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -111,10 +112,19 @@ namespace PoliticalAlerts.Scrapers
                         title = agendaDetails.InnerText;
                 }
 
+                string caseId = null;
+                string caseLinkUrl = agendaItem.SelectSingleNode("div[@class='met i-exp i-hs']/div/a")?.Attributes["href"].Value;
+                if (!string.IsNullOrEmpty(caseLinkUrl))
+                {
+                    Uri caseLinkUri = new Uri(caseLinkUrl);
+                    var queryParams = HttpUtility.ParseQueryString(caseLinkUri.Query));
+                    caseId = queryParams.Get("arkivsakid");
+                }
+
                 if (agendaItemId != null && title != null)
                 {
                     Uri url = new Uri(meetingUrl, "#" + agendaItemId);
-                    items.Add(new AgendaItem { ExternalId = agendaItemId, Title = title, Url = url });
+                    items.Add(new AgendaItem { ExternalId = agendaItemId, Title = title, Url = url, CaseNumber = caseId });
                 }
             }
 
@@ -152,9 +162,79 @@ namespace PoliticalAlerts.Scrapers
             return documents;
         }
 
-        public Task<IEnumerable<Document>> GetCaseDocuments(string caseNumber)
+        public async Task<IEnumerable<JournalEntry>> GetCaseJournal(string caseNumber)
         {
-            throw new NotImplementedException();
+            string caseUrl = url + "?response=arkivsak_detaljer&arkivsakid=" + caseNumber;
+
+            HtmlDocument caseDoc = new HtmlDocument();
+
+            caseDoc.LoadHtml(await http.GetStringAsync(caseUrl));
+
+            List<JournalEntry> entries = new List<JournalEntry>();
+
+            foreach (var journalNode in caseDoc.DocumentNode.SelectNodes("//li[descendant::div[@class='det']]"))
+            {
+                var headerNode = journalNode.SelectSingleNode("descendant::div[@class='det']");
+                var linkNode = headerNode.SelectSingleNode("descendant::/h3/a");
+                Uri journalUrl = new Uri(url, HttpUtility.HtmlDecode(linkNode.Attributes["href"].Value));
+                string journalId = HttpUtility.ParseQueryString(journalUrl.Query).Get("journalpostid");
+                string journalTitle = HttpUtility.HtmlDecode(linkNode.InnerText.Trim());
+                string journalDate = headerNode.SelectSingleNode("descendant::span[contains(., 'Journaldato')]")?.NextSibling?.InnerText;
+                DateTime journalDateParsed;
+                bool journalDateCanBeParsed = DateTime.TryParseExact(journalDate, "dd.MM.yyyy", CultureInfo.CurrentCulture, DateTimeStyles.None, out journalDateParsed);
+                
+                var detailsNode = journalNode.SelectSingleNode("descendant::div[@class='met i-exp i-hs']");
+                string journalFrom = HttpUtility.HtmlDecode(detailsNode.SelectSingleNode("descendant::span[contains(., 'Avsendar')]")?.NextSibling?.InnerText);
+                string journalTo = HttpUtility.HtmlDecode(detailsNode.SelectSingleNode("descendant::span[contains(., 'Sendt til')]")?.NextSibling?.InnerText);
+                string journalUnit = HttpUtility.HtmlDecode(detailsNode.SelectSingleNode("descendant::span[contains(., 'Ansvarlig enhet')]")?.NextSibling?.InnerText);
+                string journalType = HttpUtility.HtmlDecode(detailsNode.SelectSingleNode("descendant::span[contains(., 'Dokumenttype')]")?.NextSibling?.InnerText);
+
+                JournalType parsedType = JournalType.Unclassified;
+
+                switch (journalType.ToLower())
+                {
+                    case "utgåande dokument":
+                        parsedType = JournalType.Outbound;
+                        break;
+                    case "innkomande dokument":
+                        parsedType = JournalType.Inbound;
+                        break;
+                    case "saksframlegg":
+                        parsedType = JournalType.Proposal;
+                        break;
+                }
+
+                var entry = new JournalEntry
+                {
+                    Title = journalTitle,
+                    Date = journalDateCanBeParsed ? (DateTime?)journalDateParsed : null,
+                    ExternalId = journalId,
+                    From = journalFrom ?? journalUnit,
+                    To = journalTo ?? journalUnit,
+                    Type = journalType,
+                    ParsedType = parsedType,
+                    Url = journalUrl
+                };
+
+                entries.Add(entry);
+
+                foreach (var documentNode in detailsNode.SelectSingleNode("descendant::h3[contains(., 'Dokumenter')]").NextSibling.SelectNodes("descendant::a"))
+                {
+                    Uri documentUrl = new Uri(url, HttpUtility.HtmlDecode(documentNode.Attributes["href"].Value));
+                    string documentType = HttpUtility.HtmlDecode(documentNode.Attributes["title"].Value.Split('|')[0].Trim());
+                    string documentTitle = HttpUtility.HtmlDecode(documentNode.InnerText.Trim());
+
+                    entry.Documents.Add(new Document
+                    {
+                        JournalEntry = entry,
+                        Title = documentTitle,
+                        Url = documentUrl,
+                        Type = documentType
+                    });
+                }
+            }
+
+            return entries;
         }
     }
 }

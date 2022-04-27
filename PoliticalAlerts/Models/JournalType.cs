@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PoliticalAlerts.Models
 {
-    public enum DocumentType
+    public enum JournalType
     {
         Unclassified = 0,
         Inbound = 1,

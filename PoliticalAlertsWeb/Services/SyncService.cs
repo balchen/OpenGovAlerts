@@ -36,6 +36,8 @@ namespace PoliticalAlertsWeb.Services
             {
                 await FetchNewMeetings().ConfigureAwait(false);
                 await MatchSearches().ConfigureAwait(false);
+                await UpdateJournals().ConfigureAwait(false);
+                await MatchConsultations().ConfigureAwait(false);
                 await NotifyObservers().ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -47,6 +49,73 @@ namespace PoliticalAlertsWeb.Services
         public void SynchronizeSync()
         {
             Synchronize().GetAwaiter().GetResult();
+        }
+
+        private async Task MatchConsultations()
+        {
+            foreach (ConsultationSearch search in await db.ConsultationSearches.Include(s => s.Sources).Include(s => s.SeenJournalEntries).ThenInclude(sm => sm.JournalEntry).ToListAsync().ConfigureAwait(false))
+            {
+                logger.LogInformation("Finding matches for search " + search.Name);
+                foreach (JournalEntry journal in await db.JournalEntries.Include(j => j.Documents)
+                    .Where(j => !db.SeenJournalEntries.Any(sj => sj.JournalEntryId == j.Id && sj.ConsultationSearchId == search.Id)).ToListAsync().ConfigureAwait(false))
+                {
+                    db.SeenJournalEntries.Add(new SeenJournalEntry { JournalEntry = journal, ConsultationSearch = search, DateSeen = DateTime.UtcNow });
+
+                    string excerpt;
+
+                    if (journal.ParsedType == JournalType.Outbound && Match(search.Phrase, journal.Title, out excerpt))
+                    {
+                        db.ConsultationMatches.Add(new ConsultationMatch { JournalEntry = journal, Search = search, TimeFound = DateTime.UtcNow, Excerpt = excerpt });
+                    }
+                }
+            }
+
+            await db.SaveChangesAsync().ConfigureAwait(false);
+        }
+
+        private async Task UpdateJournals()
+        {
+            foreach (AgendaItem item in await db.AgendaItems.Include(a => a.Meeting).ThenInclude(m => m.Source).Where(a => a.CaseNumber != null && a.MonitorConsultations).ToListAsync().ConfigureAwait(false))
+            {
+                IScraper scraper = CreateScraper(item.Meeting.Source.Url);
+
+                var newJournalEntries = await scraper.GetCaseJournal(item.CaseNumber);
+
+                var existingDocuments = await db.Documents.Where(d => d.AgendaItem == item).ToListAsync().ConfigureAwait(false);
+
+                foreach (var newJournalEntry in newJournalEntries)
+                {
+                    var dbJournalEntry = await db.JournalEntries.FirstOrDefaultAsync(j => j.Url == newJournalEntry.Url);
+
+                    if (dbJournalEntry == null)
+                        dbJournalEntry = db.JournalEntries.Add(new JournalEntry
+                        {
+                            AgendaItem = item,
+                            Title = newJournalEntry.Title,
+                            Url = newJournalEntry.Url,
+                            Type = newJournalEntry.Type,
+                            ParsedType = newJournalEntry.ParsedType,
+                            ExternalId = newJournalEntry.ExternalId
+                        }).Entity;
+
+                    foreach (var newDocument in newJournalEntry.Documents)
+                    {
+                        if (!existingDocuments.Any(e => e.Url == newDocument.Url))
+                        {
+                            db.Documents.Add(new Document { 
+                                AgendaItem = item,
+                                JournalEntry = dbJournalEntry,
+                                Title = newDocument.Title,
+                                Text = newDocument.Text,
+                                Type = newDocument.Type,
+                                Url = newDocument.Url
+                            });
+                        }
+                    }
+                }
+            }
+
+            await db.SaveChangesAsync();
         }
 
         private async Task FetchNewMeetings()
@@ -72,7 +141,7 @@ namespace PoliticalAlertsWeb.Services
                 foreach (Meeting meeting in meetings)
                 {
                     meeting.Source = source;
-                    
+
                     foreach (AgendaItem item in meeting.AgendaItems)
                         item.Retrieved = DateTime.UtcNow;
 
@@ -144,6 +213,32 @@ namespace PoliticalAlertsWeb.Services
                 //await UploadToStorage(toNotify.Key, matches).ConfigureAwait(false);
                 //await AddToTaskManager(toNotify.Key, matches).ConfigureAwait(false);
             }
+
+            foreach (var toNotify in (await db.ConsultationMatches
+                .Include(m => m.Search).ThenInclude(s => s.Subscribers).ThenInclude(s => s.Observer)
+                .Include(m => m.JournalEntry).ThenInclude(a => a.AgendaItem)
+                .Where(m => m.TimeNotified == null)
+                .ToListAsync().ConfigureAwait(false))
+                .SelectMany(m => m.Search.Subscribers.Select(s => new { Match = m, Search = m.Search, Subscriber = s.Observer }))
+                .GroupBy(m => m.Subscriber))
+            {
+                logger.LogInformation("Notifying " + toNotify.Key.Name);
+
+                var matches = toNotify.Select(m => m.Match);
+
+                Smtp smtp = new Smtp();
+                await smtp.Notify(matches, toNotify.Key).ConfigureAwait(false);
+
+                foreach (ConsultationMatch match in matches)
+                {
+                    match.TimeNotified = DateTime.UtcNow;
+                }
+
+                await db.SaveChangesAsync().ConfigureAwait(false);
+
+                //await UploadToStorage(toNotify.Key, matches).ConfigureAwait(false);
+                //await AddToTaskManager(toNotify.Key, matches).ConfigureAwait(false);
+            }
         }
 
         private async Task AddToTaskManager(Observer observer, IEnumerable<Match> matches)
@@ -192,6 +287,19 @@ namespace PoliticalAlertsWeb.Services
                 {
                     excerpt += GetExcerpt(document.Title, pos);
                 }
+            }
+
+            return excerpt != null;
+        }
+
+        private bool Match(string phrase, string source, out string excerpt)
+        {
+            int pos = -1;
+            excerpt = null;
+
+            while ((pos = source.IndexOf(phrase, pos + 1, StringComparison.CurrentCultureIgnoreCase)) > -1)
+            {
+                excerpt += GetExcerpt(source, pos);
             }
 
             return excerpt != null;

@@ -21,5 +21,6 @@ namespace PoliticalAlerts.Models
 
         public IList<Match> Matches { get; set; }
         public IList<Document> Documents { get; set; }
+        public bool MonitorConsultations { get; set; }
     }
 }

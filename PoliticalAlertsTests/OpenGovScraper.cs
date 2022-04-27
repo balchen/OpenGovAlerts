@@ -34,11 +34,12 @@ namespace PoliticalAlertsTests
         {
             var caseNumber = "16/01297";
 
-            PoliticalAlerts.Scrapers.OpenGov scraper = new PoliticalAlerts.Scrapers.OpenGov("STAVANGER");
+            IScraper scraper = new PoliticalAlerts.Scrapers.OpenGov("STAVANGER");
             
-            var documents = new List<Document>(await scraper.GetCaseDocuments(caseNumber));
+            var entries = new List<JournalEntry>(await scraper.GetCaseJournal(caseNumber));
 
-            Assert.IsTrue(documents.Count > 0);
+            Assert.IsTrue(entries.Count > 0);
+            Assert.IsTrue(entries[0].Documents.Count > 0);
         }
     }
 }
