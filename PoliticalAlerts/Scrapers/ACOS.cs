@@ -113,10 +113,10 @@ namespace PoliticalAlerts.Scrapers
                 }
 
                 string caseId = null;
-                string caseLinkUrl = agendaItem.SelectSingleNode("div[@class='met i-exp i-hs']/div/a")?.Attributes["href"].Value;
+                string caseLinkUrl = HttpUtility.HtmlDecode(agendaItem.SelectSingleNode("div[@class='met i-exp i-hs']/div/a")?.Attributes["href"].Value);
                 if (!string.IsNullOrEmpty(caseLinkUrl))
                 {
-                    Uri caseLinkUri = new Uri(caseLinkUrl);
+                    Uri caseLinkUri = new Uri(url, caseLinkUrl);
                     var queryParams = HttpUtility.ParseQueryString(caseLinkUri.Query);
                     caseId = queryParams.Get("arkivsakid");
                 }

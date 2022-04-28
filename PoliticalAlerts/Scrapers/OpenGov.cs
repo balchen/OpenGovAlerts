@@ -105,13 +105,16 @@ namespace PoliticalAlerts.Scrapers
                             string detailsHtml = await http.GetStringAsync(detailsUrl);
 
                             HtmlDocument detailsDoc = new HtmlDocument();
-                            doc.LoadHtml(detailsHtml);
+                            detailsDoc.LoadHtml(detailsHtml);
+
+                            var caseNumber = detailsDoc.DocumentNode.SelectSingleNode("//div[@class='detailsList'][descendant::div[@class='detailHeader']/span[contains(., 'Saksnr')]]/div[@class='detailContent']/p")?.InnerText;
 
                             meeting.AgendaItems.Add(new AgendaItem
                             {
                                 Meeting = meeting,
                                 ExternalId = id,
                                 Title = title,
+                                CaseNumber = caseNumber,
                                 Url = new Uri(url)
                             });
                         }

@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoliticalAlerts.Models;
 using PoliticalAlerts.Scrapers;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace PoliticalAlertsTests
@@ -20,7 +21,8 @@ namespace PoliticalAlertsTests
 
             var meetingsList = new List<Meeting>(meetings);
 
-            Assert.IsTrue(meetingsList.Count > 0);
+            Assert.IsTrue(meetingsList.Count > 0, "No meetings found");
+            Assert.IsTrue(meetingsList.Any(m => m.AgendaItems.Any(a => a.CaseNumber != null)), "No case numbers found");
 
             var meeting = meetingsList[0];
 
