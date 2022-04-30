@@ -90,6 +90,7 @@ namespace PoliticalAlerts.Scrapers
                                 Meeting = meeting,
                                 ExternalId = item.Id,
                                 Title = item.Tittel,
+                                CaseNumber = item.SaksNr,
                                 Url = new Uri(agendaItemUrl)
                             };
 

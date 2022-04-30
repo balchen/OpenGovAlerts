@@ -31,10 +31,9 @@ namespace PoliticalAlerts.Scrapers
 
             List<Meeting> newMeetings = new List<Meeting>();
 
-            foreach (var meetingLink in calendar.DocumentNode.SelectNodes("//div[@id='motekalender_table']/table//a"))
+            foreach (var meetingLink in calendar.DocumentNode.SelectNodes("//table//a"))
             {
                 string meetingUrl = meetingLink.GetAttributeValue("href", null);
-                string meetingTitle = meetingLink.GetAttributeValue("title", null);
 
                 Uri meetingUri = new Uri(url, meetingUrl);
 
@@ -45,46 +44,40 @@ namespace PoliticalAlerts.Scrapers
                 HtmlDocument meetingInfo = new HtmlDocument();
                 meetingInfo.LoadHtml(meetingHtml);
 
-                string title = meetingInfo.DocumentNode.SelectSingleNode("//h3").ChildNodes[0].InnerText;
-                var titleParts = title.Split(',');
+                string boardName = meetingInfo.DocumentNode.SelectSingleNode("//h3").ChildNodes[0].InnerText;
 
-                string body = titleParts[0];
+                string title = meetingInfo.DocumentNode.SelectSingleNode("//p[@class='lead' and contains(., 'Møtedato')]")?.InnerText;
+
+                var titleParts = title.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
                 DateTime time;
-                string timePart = titleParts[1].Trim();
-                if (!DateTime.TryParseExact(timePart, "dd.MM.yyyy hh:mm", CultureInfo.CurrentCulture, DateTimeStyles.None, out time))
+                string timePart = titleParts[2].Trim();
+                if (!DateTime.TryParseExact(timePart, "dd.MM.yyyy", CultureInfo.CurrentCulture, DateTimeStyles.None, out time))
                 {
-                    string dateOnly = timePart.Split(' ')[0];
-
-                    if (!DateTime.TryParseExact(dateOnly, "dd.MM.yyyy", CultureInfo.CurrentCulture, DateTimeStyles.None, out time))
-                    {
-                        time = new DateTime();
-                    }
+                    time = new DateTime();
                 }
 
-                Meeting meeting = new Meeting { Url = meetingUri, Date = time, BoardName = body, AgendaItems = new List<AgendaItem>() };
+                Meeting meeting = new Meeting { Url = meetingUri, Date = time, BoardName = boardName, AgendaItems = new List<AgendaItem>() };
 
-                foreach (var heading in meetingInfo.DocumentNode.SelectNodes("//h4"))
+                foreach (var heading in meetingInfo.DocumentNode.SelectNodes("//h4[contains(., 'Saker til behandling')]"))
                 {
-                    if (heading.InnerText == "Saker til behandling")
+                    var agenda = heading.NextSibling;
+
+                    foreach (var agendaItem in agenda.SelectNodes("descendant::tbody/tr"))
                     {
-                        var agenda = heading.NextSibling;
+                        string number = agendaItem.ChildNodes[0].InnerText;
+                        string agendaItemTitle = agendaItem.ChildNodes[1].InnerText;
+                        string agendaItemUrl = meetingUrl + "#" + HttpUtility.UrlEncode(number);
 
-                        foreach (var agendaItem in agenda.SelectNodes("descendant::tbody/tr"))
+                        if (seenAgendaItems.Contains(agendaItemUrl))
+                            continue;
+
+                        meeting.AgendaItems.Add(new AgendaItem
                         {
-                            string number = agendaItem.ChildNodes[0].InnerText;
-                            string agendaItemTitle = agendaItem.ChildNodes[1].InnerText;
-                            string agendaItemUrl = meetingUrl + "#" + HttpUtility.UrlEncode(number);
-
-                            if (seenAgendaItems.Contains(agendaItemUrl))
-                                continue;
-
-                            meeting.AgendaItems.Add(new AgendaItem
-                            {
-                                Number = number,
-                                Title = agendaItemTitle,
-                                Url = new Uri(agendaItemUrl)
-                            });
-                        }
+                            Number = number,
+                            Title = agendaItemTitle,
+                            Url = new Uri(agendaItemUrl)
+                        });
                     }
                 }
 
