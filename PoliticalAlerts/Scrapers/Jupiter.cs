@@ -59,9 +59,19 @@ namespace PoliticalAlerts.Scrapers
 
                 Meeting meeting = new Meeting { Url = meetingUri, Date = time, BoardName = boardName, AgendaItems = new List<AgendaItem>() };
 
-                foreach (var heading in meetingInfo.DocumentNode.SelectNodes("//h4[contains(., 'Saker til behandling')]"))
+                var headings = meetingInfo.DocumentNode.SelectNodes("//h4[contains(., 'Saker til behandling')]");
+
+                if (headings == null)
+                    continue;
+
+                foreach (var heading in headings)
                 {
-                    var agenda = heading.NextSibling;
+                    HtmlNode agenda = heading;
+                    while (agenda.Name != "table")
+                        agenda = agenda.NextSibling;
+
+                    if (agenda.Name != "table")
+                        continue;
 
                     foreach (var agendaItem in agenda.SelectNodes("descendant::tbody/tr"))
                     {
@@ -72,11 +82,56 @@ namespace PoliticalAlerts.Scrapers
                         if (seenAgendaItems.Contains(agendaItemUrl))
                             continue;
 
+                        var attachments = agendaItem.SelectNodes("descendant::a");
+
+                        List<Document> documents = new List<Document>();
+
+                        if (attachments != null)
+                        {
+                            foreach (var attachment in attachments)
+                            {
+                                if (attachment.Attributes["class"]?.Value == "vedlegg" || attachment.Attributes["class"]?.Value == "andre_behandlinger")
+                                {
+                                    string attachmentsHtml = attachment.Attributes["data-content"].Value;
+
+                                    HtmlDocument attachmentsDoc = new HtmlDocument();
+                                    attachmentsDoc.LoadHtml("<html><body>" + attachmentsHtml + "</body></html>");
+
+                                    var attachmentLinks = attachmentsDoc.DocumentNode.SelectNodes("//a");
+                                    if (attachmentLinks != null)
+                                    {
+                                        foreach (var attachmentLink in attachmentLinks)
+                                        {
+                                            documents.Add(new Document
+                                            {
+                                                Title = attachmentLink.InnerText,
+                                                Type = "Vedlegg",
+                                                Url = new Uri(url, attachmentLink.Attributes["href"].Value)
+                                            });
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (attachment.InnerText == "Framlegg" || attachment.InnerText == "Protokoll")
+                                    {
+                                        documents.Add(new Document
+                                        {
+                                            Title = attachment.InnerText,
+                                            Type = attachment.InnerText,
+                                            Url = new Uri(url, attachment.Attributes["href"].Value)
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
                         meeting.AgendaItems.Add(new AgendaItem
                         {
                             Number = number,
                             Title = agendaItemTitle,
-                            Url = new Uri(agendaItemUrl)
+                            Url = new Uri(agendaItemUrl),
+                            Documents = documents
                         });
                     }
                 }

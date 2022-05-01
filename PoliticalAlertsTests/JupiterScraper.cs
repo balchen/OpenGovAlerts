@@ -22,13 +22,12 @@ namespace PoliticalAlertsTests
             var meetingsList = new List<Meeting>(meetings);
 
             Assert.IsTrue(meetingsList.Count > 0, "No meetings found");
-            Assert.IsTrue(meetingsList.Any(m => m.AgendaItems.Any(a => a.CaseNumber != null)), "No case numbers found");
 
             var meeting = meetingsList[0];
 
-            var documents = new List<Document>(await scraper.GetDocuments(meeting.AgendaItems[0]));
+            Assert.IsTrue(meeting.AgendaItems.Count > 0, "No agenda items found");
 
-            Assert.IsTrue(documents.Count > 0);
+            Assert.IsTrue(meeting.AgendaItems.Any(a => a.Documents.Count > 0), "No documents founds");
         }
 
         [TestMethod]
