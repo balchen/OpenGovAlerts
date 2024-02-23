@@ -13,7 +13,7 @@ namespace PoliticalAlertsTests
         [TestMethod]
         public async Task FindNew()
         {
-            IScraper scraper = new PoliticalAlerts.Scrapers.OpenGov("STAVANGER");
+            IScraper scraper = new PoliticalAlerts.Scrapers.OpenGov("KLEPP");
 
             var meetings = await scraper.GetNewMeetings(new HashSet<string>());
 
@@ -34,9 +34,9 @@ namespace PoliticalAlertsTests
         [TestMethod]
         public async Task GetCaseDocuments()
         {
-            var caseNumber = "16/01297";
+            var caseNumber = "22/17704";
 
-            IScraper scraper = new PoliticalAlerts.Scrapers.OpenGov("STAVANGER");
+            IScraper scraper = new PoliticalAlerts.Scrapers.OpenGov("skien");
             
             var entries = new List<JournalEntry>(await scraper.GetCaseJournal(caseNumber));
 

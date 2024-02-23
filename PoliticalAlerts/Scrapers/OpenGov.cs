@@ -141,13 +141,18 @@ namespace PoliticalAlerts.Scrapers
 
             string html = await http.GetStringAsync(url);
 
+            if (html == "Du er ikke autorisert til å bruke dette programmet.")
+            {
+                return new List<JournalEntry>();
+            }
+
             HtmlDocument doc = new HtmlDocument();
             doc.LoadHtml(html);
 
             var linkNodes = doc.DocumentNode.SelectNodes("//a[descendant::div[@class='caseTypeLink searchPageCaseheader']]");
 
             if (linkNodes == null || linkNodes.Count != 1)
-                return null;
+                return new List<JournalEntry>();
 
             var linkNode = linkNodes[0];
 

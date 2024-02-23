@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PoliticalAlerts.Models;
 using PoliticalAlerts.Scrapers;
 using System;
@@ -15,9 +16,7 @@ namespace PoliticalAlertsTests
         [TestMethod]
         public async Task FindNew()
         {
-            string query = JsonConvert.SerializeObject(new { size = 50, aggregations = new { contentTypes = "type", virksomheter = "arkivskaperTransitive" }, appliedFilters = new[] { new { fieldName = "type", fieldValue = new string[] { "Moetemappe" }, type = "termQueryFilter" }, new { fieldName = "type", fieldValue = new string[] { "JournalpostForMøte" }, type = "notQueryFilter" }, new { fieldName = "arkivskaperTransitive", fieldValue = new string[] { "http://data.oslo.kommune.no/virksomhet/osloKommune" }, type = "postQueryFilter" } } });
-
-            IScraper scraper = new PoliticalAlerts.Scrapers.eInnsyn("https://einnsyn.no/api/result", query);
+            IScraper scraper = new PoliticalAlerts.Scrapers.eInnsyn("https://einnsyn.no/api/result", "http://data.einnsyn.no/virksomhet/96bcff13-d0d4-43fd-8ea4-f9e975cdbed0");
 
             var meetings = await scraper.GetNewMeetings(new HashSet<string>());
 
