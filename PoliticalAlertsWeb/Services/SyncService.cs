@@ -17,7 +17,7 @@ using Hangfire.Storage;
 using PoliticalAlerts.TaskManagers;
 using Microsoft.Extensions.Logging;
 
-namespace PoliticalAlertsWeb.Services
+namespace PoliticalAlertsService
 {
     public class SyncService
     {
@@ -53,18 +53,25 @@ namespace PoliticalAlertsWeb.Services
 
         private async Task MatchConsultations()
         {
+            logger.LogInformation("Searching for consultations...");
+
             foreach (ConsultationSearch search in await db.ConsultationSearches.Include(s => s.Sources).Include(s => s.SeenJournalEntries).ThenInclude(sm => sm.JournalEntry).ToListAsync().ConfigureAwait(false))
             {
                 logger.LogInformation("Finding matches for search " + search.Name);
                 foreach (JournalEntry journal in await db.JournalEntries.Include(j => j.Documents)
                     .Where(j => !db.SeenJournalEntries.Any(sj => sj.JournalEntryId == j.Id && sj.ConsultationSearchId == search.Id)).ToListAsync().ConfigureAwait(false))
                 {
+                    logger.LogDebug("Search {0} has now seen new journal entry {1}", search.Name, journal.Url.ToString());
+
                     db.SeenJournalEntries.Add(new SeenJournalEntry { JournalEntry = journal, ConsultationSearch = search, DateSeen = DateTime.UtcNow });
 
                     string excerpt;
 
+                    logger.LogDebug("Matching search {0} with journal entry {1}", search.Name, journal.Url.ToString());
+
                     if (journal.ParsedType == JournalType.Outbound && Match(search.Phrase, journal.Title, out excerpt))
                     {
+                        logger.LogDebug("Search {0} has found a new match journal entry {1}", search.Name, journal.Url.ToString());
                         db.ConsultationMatches.Add(new ConsultationMatch { JournalEntry = journal, Search = search, TimeFound = DateTime.UtcNow, Excerpt = excerpt });
                     }
                 }
@@ -75,19 +82,27 @@ namespace PoliticalAlertsWeb.Services
 
         private async Task UpdateJournals()
         {
+            logger.LogInformation("Updating journals...");
+
             foreach (AgendaItem item in await db.AgendaItems.Include(a => a.Meeting).ThenInclude(m => m.Source).Where(a => a.CaseNumber != null && a.MonitorConsultations).ToListAsync().ConfigureAwait(false))
             {
                 IScraper scraper = CreateScraper(item.Meeting.Source.Url);
+
+                logger.LogInformation("Scraping journal entries from " + item.Meeting.Source.Name + " for agenda item " + item.Title);
 
                 var newJournalEntries = await scraper.GetCaseJournal(item.CaseNumber);
 
                 var existingDocuments = await db.Documents.Where(d => d.AgendaItem == item).ToListAsync().ConfigureAwait(false);
 
+                logger.LogDebug("Found {0] new journal entries from {1} for agenda item {2}", newJournalEntries.Count(), item.Meeting.Source.Name, item.Title);
+
                 foreach (var newJournalEntry in newJournalEntries)
                 {
+                    logger.LogDebug("Processing journal entry {0} from {1} for agenda item {2}", newJournalEntry.Url.ToString(), item.Meeting.Source.Name, item.Title);
                     var dbJournalEntry = await db.JournalEntries.FirstOrDefaultAsync(j => j.Url == newJournalEntry.Url);
 
                     if (dbJournalEntry == null)
+                    {
                         dbJournalEntry = db.JournalEntries.Add(new JournalEntry
                         {
                             AgendaItem = item,
@@ -97,6 +112,7 @@ namespace PoliticalAlertsWeb.Services
                             ParsedType = newJournalEntry.ParsedType,
                             ExternalId = newJournalEntry.ExternalId
                         }).Entity;
+                    }
 
                     foreach (var newDocument in newJournalEntry.Documents)
                     {

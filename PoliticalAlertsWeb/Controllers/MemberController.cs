@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PoliticalAlerts.Models;
 using PoliticalAlertsWeb.Models;
@@ -11,9 +12,10 @@ namespace PoliticalAlertsWeb.Controllers
     [Route("api/[controller]/[action]")]
     [ApiController]
     [Produces("application/json")]
+    [Authorize]
     public class MemberController: ControllerBase
     {
-        private AlertsDbContext db;
+        private readonly AlertsDbContext db;
 
         public MemberController(AlertsDbContext db)
         {
@@ -22,11 +24,13 @@ namespace PoliticalAlertsWeb.Controllers
 
         public async Task<ActionResult> GetIndex()
         {
+            int userId = int.Parse(base.User.Identity.Name);
+
             MemberIndexModel result = new MemberIndexModel();
 
             DateTime matchesSince = DateTime.UtcNow.Subtract(TimeSpan.FromDays(7));
 
-            result.Observers = await db.Observers.Include(o => o.CreatedSearches).ToListAsync();
+            result.Observers = await db.UserObservers.Include(uo => uo.Observer).ThenInclude(o => o.CreatedSearches).Where(uo => uo.User.Id == userId).Select(uo => uo.Observer).ToListAsync();
             result.RecentMatches = await db.Matches
                 .Include(m => m.Search).ThenInclude(s => s.CreatedBy)
                 .Include(m => m.AgendaItem).ThenInclude(a => a.Meeting).ThenInclude(m => m.Source)

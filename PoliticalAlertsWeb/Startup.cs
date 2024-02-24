@@ -8,6 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using PoliticalAlertsWeb.Models;
 using PoliticalAlertsWeb.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Linq;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using PoliticalAlertsWeb.Settings;
 
 namespace PoliticalAlertsWeb
 {
@@ -23,6 +29,47 @@ namespace PoliticalAlertsWeb
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var authSettingsSection = Configuration.GetSection("Authentication");
+            services.Configure<AuthenticationSettings>(authSettingsSection);
+            var authSettings = authSettingsSection.Get<AuthenticationSettings>();
+
+            var key = Encoding.ASCII.GetBytes(authSettings.Secret);
+
+            services.AddAuthentication(x =>
+            {
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(x =>
+            {
+                x.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var db = context.HttpContext.RequestServices.GetRequiredService<AlertsDbContext>();
+                        var userId = int.Parse(context.Principal.Identity.Name ?? string.Empty);
+                        var roleId = int.Parse(context.Principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "0");
+
+                        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                        if (user == null || roleId != (int)user.Role)
+                        {
+                            // return unauthorized if user no longer exists
+                            context.Fail("Unauthorized");
+                        }
+                    }
+                };
+                x.RequireHttpsMetadata = false;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = true
+                };
+            });
+
             services.AddMvc()
                 .AddMvcOptions(options => { 
                     options.EnableEndpointRouting = false; 

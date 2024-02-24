@@ -11,6 +11,8 @@ namespace PoliticalAlertsWeb.Models
             : base(options)
         { }
 
+        public DbSet<User> Users { get; set; }
+        public DbSet<UserObserver> UserObservers { get; set; }
         public DbSet<Document> Documents { get; set; }
         public DbSet<AgendaItem> AgendaItems { get; set; }
         public DbSet<Meeting> Meetings { get; set; }
@@ -37,6 +39,12 @@ namespace PoliticalAlertsWeb.Models
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Username, "IX_User_Username");
+
+            modelBuilder.Entity<UserObserver>()
+                .HasKey(u => new { u.UserId, u.ObserverId });
 
             modelBuilder.Entity<Source>()
                 .HasMany(s => s.Meetings)
@@ -129,7 +137,6 @@ namespace PoliticalAlertsWeb.Models
             modelBuilder.Entity<JournalEntry>()
                 .Property(e => e.Url)
                 .HasConversion(v => v.ToString(), v => new Uri(v));
-
         }
     }
 }
